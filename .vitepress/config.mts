@@ -4,6 +4,9 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   title: "My Awesome Project",
   description: "A VitePress Site",
+  // 打包输出目录
+  outDir: "docs",
+  base: "/oyy-docs/",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     // 右上角导航

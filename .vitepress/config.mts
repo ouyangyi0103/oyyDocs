@@ -7,7 +7,7 @@ export default defineConfig({
   // 打包输出目录
   outDir: "docs",
   // 根路径
-  base: "/docs/",
+  base: "/oyyDocs/",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     // 右上角导航

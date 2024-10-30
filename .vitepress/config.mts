@@ -6,6 +6,7 @@ export default defineConfig({
   description: "A VitePress Site",
   // 打包输出目录
   outDir: "docs",
+  // 根路径
   base: "/oyy-docs/",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config

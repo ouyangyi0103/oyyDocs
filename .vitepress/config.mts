@@ -2,8 +2,9 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "My Awesome Project",
-  description: "A VitePress Site",
+  title: "oyy Project",
+  description:
+    "无人扶我青云志，我自踏雪至山巅。若是命中无此运，孤身亦可登昆仑。",
   // 打包输出目录
   outDir: "docs",
   // 根路径
@@ -12,8 +13,8 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     // 右上角导航
     nav: [
-      { text: "Home导航", link: "/" },
-      { text: "Examples导航", link: "/markdown-examples" }
+      { text: "首页", link: "/" },
+      { text: "武林秘籍", link: "/jq" }
     ],
     // 全局搜索
     search: {
@@ -22,10 +23,10 @@ export default defineConfig({
     // 左侧导航
     sidebar: [
       {
-        text: "Examples",
+        text: "知识点",
         items: [
-          { text: "Markdown Examples", link: "/markdown-examples" },
-          { text: "Runtime API Examples", link: "/api-examples" }
+          { text: "jq源码", link: "/jq" },
+          { text: "项目埋点SDK设计", link: "/track" }
         ]
       }
     ],

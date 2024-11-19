@@ -3,23 +3,22 @@
 layout: home
 
 hero:
-  name: "My Awesome Project"
-  text: "A VitePress Site"
-  tagline: My great project tagline
+  name: "青云志"
+  text: ""
+  tagline: 无人扶我青云志，我自踏雪至山巅。若是命中无此运，孤身亦可登昆仑。
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
-    - theme: alt
-      text: API Examples
-      link: /api-examples
+      text: 武林秘籍
+      link: /jq
+    # - theme: alt
+    #   text: API Examples
+    #   link: /api-examples
 
 features:
-  - title: Feature A
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  - title: 栏目一
+    details: 日后写点什么
+  - title: 栏目二
+    details: 日后写点什么
+  - title: 栏目三
+    details: 日后写点什么
 ---
-

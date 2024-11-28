@@ -1,8 +1,19 @@
+---
+outline: deep
+head:
+  - - meta
+    - name: title
+      content: 自我学习
+  - - meta
+    - name: description
+      content: 自我学习，努力上进
+---
+
 # jq 源码
 
 ## 一、箭头函数与普通函数的区别
 
-**1.消除函数的二义性**
+### 1.消除函数的二义性
 
 ```js{5}
 let Game = function () {
@@ -12,7 +23,7 @@ let Game = function () {
 那么Game这个函数，我不知道什么时候该new，还是直接调用，这就产生了函数的二义性了，箭头函数的出现就是为了解决这个问题
 ```
 
-**2.箭头函数没有原型对象**
+### 2.箭头函数没有原型对象
 
 ```js
 箭头函数:只能被调用，不能被new
@@ -34,25 +45,25 @@ class Game {
 
 ## 二、原型
 
-**1.显式原型**
+### 1.显式原型
 
 ```js
 prototype：它是函数的属性
 ```
 
-**2.隐式原型**
+### 2.隐式原型
 
 ```js
 __proto__：它是对象的属性
 ```
 
-**3.构造函数**
+### 3.构造函数
 
 ```js
 constructor：它指向函数本身
 ```
 
-**4.原型连**
+### 4.原型连
 
 ```js
 其实就是 prototype 和 __proto__ 在进行嵌套
@@ -219,9 +230,31 @@ This is a details block.
 $("div").text("888");
 ```
 
-<!-- ## 贡献者 -->
+## 四、requestAnimationFrame() 方法
+::: tip window.requestAnimationFrame()
+window.requestAnimationFrame() 方法会告诉浏览器你希望执行一个动画。它要求浏览器在下一次重绘之前，调用用户提供的回调函数。
 
-<!-- <script setup>
+对回调函数的调用频率通常与显示器的刷新率相匹配。虽然 75hz、120hz 和 144hz 也被广泛使用，但是最常见的刷新率还是 60hz（每秒 60 个周期/帧）。为了提高性能和电池寿命，大多数浏览器都会暂停在后台选项卡或者隐藏的 iframe 中运行的 requestAnimationFrame()。
+:::
+
+::: tip 参数 callback
+1.该函数会在下一次重绘更新你的动画时被调用到。这个回调函数只会传递一个参数：一个 DOMHighResTimeStamp 参数，用于表示上一帧渲染的结束时间（基于 time origin 的毫秒数）
+
+2.时间戳是一个以毫秒为单位的十进制数字，最小精度为 1 毫秒。对于 Window 对象（而非 workers）来说，它等同于 document.timeline.currentTime。此时间戳在同一代理上（所有同源的 window，更重要的是同源的 iframe）运行的所有窗口之间共享——它允许在多个 requestAnimationFrame 回调函数中执行同步动画。此时间戳值也近似于在回调函数开始时调用 performance.now()，但它们永远都不会是相同的值。
+
+3.当 requestAnimationFrame() 队列中的多个回调开始在同一帧中触发时，它们都会收到相同的时间戳，即便在计算前一个回调函数工作量时这一帧的时间已经过去。
+:::
+
+::: danger 注意
+若你想在浏览器下次重绘之前继续更新下一帧动画，那么回调函数自身必须再次调用 requestAnimationFrame()。requestAnimationFrame() 是一次性的。
+:::
+
+
+:tada:
+
+<!-- ## 贡献者
+
+<script setup>
   import {VPTeamMembers} from 'vitepress/theme'
   const members = [
     {

@@ -26,7 +26,7 @@ export default defineConfig({
         text: "知识点",
         items: [
           { text: "jq源码", link: "/jq" },
-          { text: "项目埋点SDK设计", link: "/track" }
+          { text: "项目埋点与监控SDK设计", link: "/track" }
         ]
       }
     ],

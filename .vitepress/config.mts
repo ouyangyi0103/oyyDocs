@@ -8,13 +8,20 @@ export default defineConfig({
   // 打包输出目录
   outDir: "docs",
   // 根路径
-  base: "/oyyDocs/",
+  base: "/oyyDocs/src",
+  // 源目录
+  srcDir: "src",
+  // 重写路由
+  rewrites: {
+    "/xm-md/jq.md": "xm-md/js.md",
+    "/xm-md/track.md": "xm-md/track.md"
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     // 右上角导航
     nav: [
-      { text: "首页", link: "/" },
-      { text: "武林秘籍", link: "/jq" }
+      { text: "首页", link: "/index.md" },
+      { text: "武林秘籍", link: "/xm-md/jq.md" }
     ],
     // 全局搜索
     search: {
@@ -25,8 +32,8 @@ export default defineConfig({
       {
         text: "知识点",
         items: [
-          { text: "jq源码", link: "/jq" },
-          { text: "项目埋点与监控SDK设计", link: "/track" }
+          { text: "jq源码", link: "/xm-md/jq" },
+          { text: "项目埋点与监控SDK设计", link: "/xm-md/track" }
         ]
       }
     ],

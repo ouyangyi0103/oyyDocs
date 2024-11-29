@@ -33,7 +33,7 @@ npx vite底层原理:
    如果发现本地没有，就会去全局的node_moduls去找，全局的还找不到，就会去环境变量里面找，还找不到就去对应的git仓库下载安装，运行完再删掉
 :::
 
-## 一、index.html
+## 一、引入主入口
 ```html
 <body>
   <h1>埋点</h1>
@@ -51,29 +51,37 @@ type="module"的作用：
 在script里面加type="module"是给浏览器用的，在package.json里面加type="module"是给node用的
 ```
 
-## 二、main.ts
-```ts
+## 二、项目主入口实例化Tracker
+```js
+// main.ts
 import { Tracker } from './lib'
 
 new Tracker();
 ```
 
-## 三、lib/index.ts
+## 三、Tracker类
 ```ts
+// lib/index.ts
 import { getUserInfo } from './user/index'
-import button from './button'
+import button from './lib/button'
+import error from './lib/error/window'
+import promiseError from './lib/error/promise'
+import request from './lib/request/ajax'
+import pv from './lib/pv/page'
+import onepage from './lib/onepage/index'
 
 export class Tracker{
   constrctor(){
     events: Record<string,Function>
-    this.events = {button}
+    this.events = {button,error,promiseError,request,pv,onepage}
     this.init()
   }
 
-  publick sendRequst(){
-    const userInfo = getUserInfo()
+  public sendRequst(params){
+    const userInfo = getUserInfo();
+    const body = Object.assign({},params,userInfo);
     // 这里都不能使用axios,ajsx,fetch,为什么不能使用呢？
-    let blob = new Blob([JSON.stringify(userInfo)],{type: "application/json"})
+    let blob = new Blob([JSON.stringify(body)],{type: "application/json"})
     navigator.sendBeacon('https://www.baidu.com',blob)
   }
 
@@ -96,39 +104,224 @@ export class Tracker{
   4.会默认携带cookies
 ::: 
 
-## 四、lib/user/index.ts
-```ts
+## 四、获取用户信息函数
+```js
+// lib/user/index.ts
 export const getUserInfo = (user = {}) => {
   return {
     userId:1,
     name: 'oyy',
-    data: new Date().getTime(),
+    date: new Date().getTime(),
     userAgent: navigator.userAgent
   }
 }
 ```
 
-## 五、lib/button/index.ts
+## 五、埋点上报
 ```ts
+// lib/button/index.ts
 export default function button(send){
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLELement;
     // 读取自定义属性
     const token = target.getAttribute('data-tracker');
-    if(token){
+    // 获取点击按钮的位置
+    let position = target.getBoundingClientRect();
+    if(token){ 
       // 上报按钮点击
-      send()
+      send({
+        type: 'event',
+        text: token,
+        data: {
+          x: position.x,
+          y: position.y,
+          width: position.width,
+          height: position.height,
+        }
+      })
     }
   })
 }
 ```
 
-## 六、lib\index.ts
+## 六、window错误上报
 ```ts
+// lib/error/window.ts
+export default function error(send){
+  window.addEventListener('error',(event)=>{
+    send({
+      type: event.error,
+      text: event.message,
+      data: {
+        lineno: event.lineno,
+        filname: event.filname
+      }
+    })
+  })
+}
 ```
 
-## 七、lib\index.ts
+## 七、promise错误上报
+unhandledrejection可以捕获全局的promise错误
 ```ts
+// lib/error/promise.ts
+export default function promiseError(send){
+  window.addEventListener('unhandledrejection',(event)=>{
+      send({
+      type: event.type,
+      text: event.reason,
+      data: {
+        reason: event.reason,
+        path: location.href
+      }
+    })
+  })
+}
+
+```
+
+## 八、请求错误上报
+```ts
+// lib/request/ajax.ts
+export default function request(send){
+  // axios有请求拦截和响应拦截，ajax没有请求拦截与响应拦截，该如何处理
+  // 拦截原生api就是去 重写它的方法
+  const OriginOpen = XMLHttpRequest.prototype.open;
+  const OriginSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method,url,async=true){
+    send({
+      type: 'ajax',
+      text: 'request',
+      data: {
+        method,
+        url
+      }
+    })
+    OriginOpen.call(this,method,url,async)
+  }
+
+  XMLHttpRequest.prototype.send = function(body){
+    send({
+      type: 'ajax',
+      text: 'request',
+      data: {
+        body
+      }
+    })
+    OriginSend.call(this,body)
+  }
+
+  //发送fetch请求
+  const OriginFetch = window.fetch;
+  window.fetch = function(...args){
+    send({
+      type: 'fetch',
+      text: 'request',
+      data: {
+        args
+      }
+    })
+    return OriginFetch.call(this, ...args)
+  }
+}
+
+```
+## 九、路由监听
+```js
+export default function pv(send){
+  // hash监听
+  window.addEventListener('hashchange',(e)=>{
+     send({
+      type: 'pv-hash',
+      text: location.href,
+      data: {
+        path: location.href,
+        newURL: e.newURL,
+        newURL: e.oldURL,
+      }
+    })
+  })
+
+  // history监听
+  window.addEventListener('popstate',(e)=>{
+    send({
+      type: 'pv-history',
+      text: e.type,
+      data: {
+        state: e.state,
+        url: location.href
+      }
+    })
+  })
+
+  // 重写pushState
+  const pushState = history.pushState;
+  window.history.pushState = function(state,title,url){
+    const res = pushState.call(this, state, title, url);
+
+    // 定义自定义事件，万一在别处也需要进行监听
+    const e = new Event('pushState') // 发布订阅
+    window.dispatchEvent(e);
+
+    return res;
+  }
+  window.addEventListener('pushState',(e)=>{
+    send({
+      type: 'pv-pushState',
+      text: e.type,
+      data: {
+        url: location.href
+      }
+    })
+  })
+}
+
+```
+
+## 十、首屏加载
+```js
+export default function onepage(send){
+  let firstScreenTime = 0;
+  const ob = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      firstScreenTime = performance.now();
+    })
+    if(firstScreenTime > 0){
+      send({
+        type: 'onepage',
+        text: '首屏加载时间',
+        data: {
+          firstScreenTime
+        }
+      })
+      // 断开监听
+      ob.disconnect()
+    }
+  })
+
+  // 是vue项目，将document节点换成app节点  
+  // childList为true 是子节点发生变化了(增删改查)，就会监听到  
+  // subtree为true 是监听整个子节点，包括子节点的后代
+  ob.observer(document, { childList: true, subtree: true })
+}
+```
+
+## 七、邮件发送
+```ts
+npm i nodemailer
+
+// server/index.ts
+import express from 'express'
+import nodemailer from 'nodemailer'
+
+const transporter = nodemailer.createTransport({
+  service: 'qq',
+  port: 465,
+  host: 'smtp.qq.com'
+  pass: 'xxxxxx'  // qq邮箱的密钥
+})
+
+
 ```
 
 ## 八、跨域

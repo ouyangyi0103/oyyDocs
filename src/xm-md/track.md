@@ -308,15 +308,14 @@ export default function onepage(send) {
 :::tip MutationObserver
 MutationObserver 接口提供了监视对 DOM 树所做更改的能力.
 
-```js
 方法
-  disconnect()
-    阻止 MutationObserver 实例继续接收的通知，直到再次调用其 observe() 方法，该观察者对象包含的回调函数都不会再被调用。
-  observe()
-    配置 MutationObserver 在 DOM 更改匹配给定选项时，通过其回调函数开始接收通知。
-  takeRecords()
-    从 MutationObserver 的通知队列中删除所有待处理的通知，并将它们返回到 MutationRecord 对象的新 Array 中。
-```
+
+1. disconnect()
+   阻止 MutationObserver 实例继续接收的通知，直到再次调用其 observe() 方法，该观察者对象包含的回调函数都不会再被调用。
+2. observe()
+   配置 MutationObserver 在 DOM 更改匹配给定选项时，通过其回调函数开始接收通知。
+3. takeRecords()
+   从 MutationObserver 的通知队列中删除所有待处理的通知，并将它们返回到 MutationRecord 对象的新 Array 中。
 
 :::
 
@@ -344,22 +343,28 @@ const transporter = nodemailer.createTransport({
 请求分为 普通请求 和 复杂请求
 :::tip 普通请求
 默认支持的请求头部
-1.Content-Type: application/x-www-form-urlencoded
-2.Content-Type: multipart/form-data
-3.Content-Type: text/plain
+
+1. Content-Type: application/x-www-form-urlencoded
+2. Content-Type: multipart/form-data
+3. Content-Type: text/plain
 
 默认支持的请求类型
-get post head options
+
+1. get
+2. post
+3. head
+4. options
 
 默认支持请求头的字段
-Accept
-Accept-Language
-Content-Language
-Content-Type
-Origin
-Referer
-User-Agent
-:::
+
+1. Accept
+2. Accept-Language
+3. Content-Language
+4. Content-Type
+5. Origin
+6. Referer
+7. User-Agent
+   :::
 
 :::tip 复杂请求
 Content-type: application/json
@@ -397,9 +402,12 @@ res.setHeader('Access-Control-Allow-Headers','Content-Type')
 :::
 
 :::tip 发送两次请求(预检请求)
-触发条件 1.排除普通请求 2.自定义请求头 3.必须是 post 并且为 application/json
-触发条件达到，就会发送预检请求(options 请求)，浏览器自己发送的
-:::
+触发条件
+
+1. 排除普通请求
+2. 自定义请求头
+3. 必须是 post 并且为 application/json，触发条件达到，就会发送预检请求(options 请求)，浏览器自己发送的
+   :::
 
 ## 九、关于数据的存储
 

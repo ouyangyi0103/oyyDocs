@@ -305,6 +305,19 @@ export default function onepage(send){
   ob.observer(document, { childList: true, subtree: true })
 }
 ```
+:::tip MutationObserver
+MutationObserver 接口提供了监视对 DOM 树所做更改的能力.
+
+```js
+方法
+  disconnect()
+    阻止 MutationObserver 实例继续接收的通知，直到再次调用其 observe() 方法，该观察者对象包含的回调函数都不会再被调用。
+  observe()
+    配置 MutationObserver 在 DOM 更改匹配给定选项时，通过其回调函数开始接收通知。
+  takeRecords()
+    从 MutationObserver 的通知队列中删除所有待处理的通知，并将它们返回到 MutationRecord 对象的新 Array 中。
+```
+:::
 
 ## 七、邮件发送
 ```ts
@@ -386,4 +399,12 @@ const transporter = nodemailer.createTransport({
   2.自定义请求头
   3.必须是post并且为application/json
 触发条件达到，就会发送预检请求(options请求)，浏览器自己发送的
+:::
+
+## 九、关于数据的存储
+:::tip 存储
+一般是存入Redis，不存在mysql，因为Redis是内存存储（速度快），而mysql是硬盘存储
+但是内存存储可能会丢失，比如重启或者宕机了，所以需要做redis持久化(RDB,AOF两种)
+在redis.conf文件里将 appendonly 设置为 yes，就开启了AOF持久化（常用）
+还有一种是RDB，配置为 save 3600 5
 :::

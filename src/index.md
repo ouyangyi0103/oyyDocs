@@ -9,16 +9,16 @@ hero:
   actions:
     - theme: brand
       text: 武林秘籍
-      link: /jq
+      link: /xm-md/jq.md
     # - theme: alt
     #   text: API Examples
     #   link: /api-examples
 
 features:
-  - title: 栏目一
-    details: 日后写点什么
-  - title: 栏目二
-    details: 日后写点什么
-  - title: 栏目三
-    details: 日后写点什么
+  - title: xm
+    details: 好好跟着xm学习
+  - title: oyy
+    details: 好好自我提升
+  - title: zw
+    details: 需要再次学习一遍
 ---

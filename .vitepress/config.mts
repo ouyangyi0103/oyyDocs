@@ -8,9 +8,9 @@ export default defineConfig({
   // 打包输出目录
   outDir: "docs",
   // 根路径
-  base: "/oyyDocs/src",
+  base: "/oyyDocs/src-pages",
   // 源目录
-  srcDir: "src",
+  srcDir: "src-pages",
   // 重写路由
   rewrites: {
     "/xm-md/jq.md": "xm-md/js.md",

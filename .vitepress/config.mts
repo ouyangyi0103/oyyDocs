@@ -14,7 +14,8 @@ export default defineConfig({
   // 重写路由
   rewrites: {
     "/xm-md/jq.md": "xm-md/js.md",
-    "/xm-md/track.md": "xm-md/track.md"
+    "/xm-md/track.md": "xm-md/track.md",
+    "/xm-md/monorepo.md": "xm-md/monorepo.md"
   },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
@@ -33,7 +34,8 @@ export default defineConfig({
         text: "知识点",
         items: [
           { text: "jq源码", link: "/xm-md/jq" },
-          { text: "项目埋点与监控SDK设计", link: "/xm-md/track" }
+          { text: "项目埋点与监控SDK设计", link: "/xm-md/track" },
+          { text: "pnpm与monorepo底层原理", link: "/xm-md/monorepo" }
         ]
       }
     ],

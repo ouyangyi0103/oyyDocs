@@ -18,7 +18,7 @@ features:
   - title: xm
     details: 好好跟着xm学习
   - title: oyy
-    details: 好好自我提升
+    details: 好好修行自我
   - title: zw
     details: 需要再次学习一遍
 ---

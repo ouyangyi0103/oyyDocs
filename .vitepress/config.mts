@@ -10,7 +10,7 @@ export default defineConfig({
   // 根路径
   base: "/oyyDocs/docs",
   // 源目录
-  srcDir: "src",
+  srcDir: "src-pages",
   // 重写路由
   // rewrites: {
   //   "/xm-md/jq.md": "/jq.md",

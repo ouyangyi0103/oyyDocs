@@ -94,8 +94,13 @@ export class Tracker {
 
 但是 navigator.sendBeacon 发送请求，在页面关闭的时候，接口还是在继续发送
 
-注意点： 1.默认发送的是 post 请求，并且是一个 ping 请求，速度快，不能发送很长的数据，返回的数据要很小 2.不能传送 json，可以使用 blob 去传递 json，设置 type 为 application/json 3.使用 json 会跨域 4.会默认携带 cookies
-:::
+注意点：
+
+1. 默认发送的是 post 请求，并且是一个 ping 请求，速度快，不能发送很长的数据，返回的数据要很小
+2. 不能传送 json，可以使用 blob 去传递 json，设置 type 为 application/json
+3. 使用 json 会跨域
+4. 会默认携带 cookies
+   :::
 
 ## 四、获取用户信息函数
 
@@ -325,17 +330,102 @@ MutationObserver 接口提供了监视对 DOM 树所做更改的能力.
 npm i nodemailer
 
 // server/index.ts
-import express from 'express'
-import nodemailer from 'nodemailer'
+import express from "express";
+// import Redis from "ioredis";
+import nodemailer from "nodemailer";
 
+// const redis = new Redis({
+//   host: "127.0.0.1",
+//   port: 6379
+// });
+
+// 将报错信息发送邮件告知前端
 const transporter = nodemailer.createTransport({
-  service: 'qq',
+  service: "qq",
   port: 465,
-  host: 'smtp.qq.com'
-  pass: 'xxxxxx'  // qq邮箱的密钥
-})
+  // 发送的协议
+  host: "smtp.qq.com",
+  auth: {
+    user: "178819633@qq.com",
+    pass: "ytocbsxxbxbtbhaj"
+  }
+});
 
+const app = express();
 
+// 在请求是会进行跨域
+app.use("*", (req, res, next) => {
+  // 面试题
+  // 后端丢失了session的原因是什么？
+  // 原因是设置了 * 号
+
+  // 在解决时，不能设置星号，因为 * 是不允许上传cookie的
+  /*
+    Access to resource at 'http://localhost:3000/tracker' from origin 'http://localhost:5173'
+    has been blocked by CORS policy: Response to preflight request doesn't pass access control
+    check: The value of the 'Access-Control-Allow-Origin' header in the response
+    must not be the wildcard '*' when the request's credentials mode is 'include'.
+  */
+  // res.setHeader("Access-Control-Allow-Origin", "*");
+
+  /* 这个报错是说明不允许上传cookie
+    Access to resource at 'http://localhost:3000/tracker' from origin 'http://localhost:5173'
+    has been blocked by CORS policy: Response to preflight request doesn't pass access control
+    check: The value of the 'Access-Control-Allow-Credentials' header in the response is ''
+    which must be 'true' when the request's credentials mode is 'include'.
+   */
+  // 指定ip是可以允许上报cookie的，前段的cookie就是后端的session
+  res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+
+  // 所以要设置一下，支持cookie的上传，因为cookie在请求时，会自动携带上传到后端
+  // 在谷歌浏览器95版本之后，不允许cookie跨域
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  // 还是进行报错
+  /*
+    Access to resource at 'http://localhost:3000/tracker' from origin 'http://localhost:5173'
+    has been blocked by CORS policy: Request header field content-type is not allowed by
+    Access-Control-Allow-Headers in preflight response.
+  */
+  // 因为cors只能允许我们发送普通的请求
+  // 普通的请求：1.URLSearchParams ?a=2&b=3 2.text/plain 3.formData 只允许这三种形式
+  // 而我们发送的是一个json对象，所以不支持
+  // Content-Type: application/json 它是不存在的，是一个自定义的type
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  next();
+});
+
+// express 是不支持post请求的，需要使用中间件
+// use中间件支持一下post
+app.use(express.json());
+
+// req request接收前端传过来的信息
+// res responese给前端返回信息
+app.post("/tracker", (req, res) => {
+  // get请求 是query
+  // post请求 是body
+  // 动态参数 是params
+  console.log(req.body);
+  if (req.body.type === "error" || req.body.type === "unhandledrejection") {
+    transporter.sendMail({
+      from: "178819633@qq.com",
+      to: "178819633@qq.com",
+      subject: "前端error",
+      text: JSON.stringify(req.body)
+    });
+  }
+
+  // redis.lpush("tracker", JSON.stringify(req.body));
+  // 埋点，后端一定返回较少的数据给前端
+  res.send("ok");
+});
+
+const port = 3000;
+
+app.listen(port, () => {
+  console.log("port 3000 is runing......");
+});
 ```
 
 ## 八、跨域

@@ -8,15 +8,15 @@ export default defineConfig({
   // 打包输出目录
   outDir: "docs",
   // 根路径
-  base: "/oyyDocs/src",
+  base: "/oyyDocs/docs",
   // 源目录
   srcDir: "src",
   // 重写路由
-  rewrites: {
-    "/xm-md/jq.md": "xm-md/js.md",
-    "/xm-md/track.md": "xm-md/track.md",
-    "/xm-md/monorepo.md": "xm-md/monorepo.md"
-  },
+  // rewrites: {
+  //   "/xm-md/jq.md": "/jq.md",
+  //   "/xm-md/track.md": "/track.md",
+  //   "/xm-md/monorepo.md": "/monorepo.md"
+  // },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     // 右上角导航

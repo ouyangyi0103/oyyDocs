@@ -8,21 +8,13 @@ export default defineConfig({
   // 打包输出目录
   outDir: "docs",
   // 根路径
-  base: "/oyyDocs/docs",
-  // 源目录
-  srcDir: "src-pages",
-  // 重写路由
-  // rewrites: {
-  //   "/xm-md/jq.md": "/jq.md",
-  //   "/xm-md/track.md": "/track.md",
-  //   "/xm-md/monorepo.md": "/monorepo.md"
-  // },
+  base: "/oyyDocs/",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     // 右上角导航
     nav: [
-      { text: "首页", link: "/index.md" },
-      { text: "武林秘籍", link: "/xm-md/jq.md" }
+      { text: "首页", link: "index.md" },
+      { text: "武林秘籍", link: "src-pages/xm-md/jq.md" }
     ],
     // 全局搜索
     search: {
@@ -33,9 +25,9 @@ export default defineConfig({
       {
         text: "知识点",
         items: [
-          { text: "jq源码", link: "/xm-md/jq" },
-          { text: "项目埋点与监控SDK设计", link: "/xm-md/track" },
-          { text: "pnpm与monorepo底层原理", link: "/xm-md/monorepo" }
+          { text: "jq源码", link: "src-pages/xm-md/jq" },
+          { text: "项目埋点与监控SDK设计", link: "src-pages/xm-md/track" },
+          { text: "pnpm与monorepo底层原理", link: "src-pages/xm-md/monorepo" }
         ]
       }
     ],

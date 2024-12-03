@@ -9,7 +9,7 @@ hero:
   actions:
     - theme: brand
       text: 武林秘籍
-      link: /xm-md/jq.md
+      link: src-pages/xm-md/jq.md
     # - theme: alt
     #   text: API Examples
     #   link: /api-examples

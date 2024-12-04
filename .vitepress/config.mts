@@ -23,11 +23,11 @@ export default defineConfig({
     // 左侧导航
     sidebar: [
       {
-        text: "知识点",
+        text: "xm学堂",
         items: [
           { text: "jq源码", link: "src-pages/xm-md/jq" },
           { text: "项目埋点与监控SDK设计", link: "src-pages/xm-md/track" },
-          { text: "pnpm与monorepo底层原理", link: "src-pages/xm-md/monorepo" }
+          { text: "monorepo与pnpm的底层原理", link: "src-pages/xm-md/monorepo" }
         ]
       }
     ],

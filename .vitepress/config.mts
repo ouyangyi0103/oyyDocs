@@ -25,10 +25,10 @@ export default defineConfig({
       {
         text: "xm学堂",
         items: [
-          { text: "jq源码", link: "src-pages/xm-md/jq" },
-          { text: "项目埋点与监控SDK设计", link: "src-pages/xm-md/track" },
-          { text: "monorepo与pnpm的底层原理", link: "src-pages/xm-md/monorepo" },
-          { text: "axios原理", link: "src-pages/xm-md/axios" }
+          { text: "一、jq源码", link: "src-pages/xm-md/jq" },
+          { text: "二、项目埋点与监控SDK设计", link: "src-pages/xm-md/track" },
+          { text: "三、monorepo与pnpm的原理", link: "src-pages/xm-md/monorepo" },
+          { text: "四、axios原理", link: "src-pages/xm-md/axios" }
         ]
       }
     ],

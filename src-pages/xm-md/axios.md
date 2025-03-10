@@ -96,8 +96,8 @@ axios({
       │    └── utils.ts
       │    └── data.ts
       │    └── headers.ts
-  ├── index.ts
-  ├── xhr.ts
+      ├── index.ts
+      ├── xhr.ts
   ├── index.html
   ├── main.ts
   ├── package-lock.json
@@ -105,7 +105,38 @@ axios({
   ├── tsconfig.json
 ```
 
-### 1.在 index.ts 中
+### 1. 在 main.ts 中
+
+```js
+import axios from "./src/index";
+
+const btnGet = document.getElementById("btnGet");
+const btnPost = document.getElementById("btnPost");
+
+btnGet.addEventListener("click", () => {
+  axios({
+    url: "/user/12345",
+    method: "get",
+    params: {
+      a: 1,
+      b: 2
+    }
+  });
+});
+
+btnPost.addEventListener("click", () => {
+  axios({
+    url: "/user/12345",
+    method: "post",
+    data: {
+      a: 1,
+      b: 2
+    }
+  });
+});
+```
+
+### 2.在 src 的 index.ts 中
 
 ```js
 import type { AxiosRequestConfig } from "./types";
@@ -135,38 +166,66 @@ function transformURL(config: AxiosRequestConfig): string {
 export default axios;
 ```
 
-### 2.xhr.ts 文件
+### 3.在 src 的 xhr.ts 文件
 
 ```js
 import type { AxiosRequestConfig } from "./types";
 
 export default function xhr(config: AxiosRequestConfig) {
-  const {
-    url,
-    method = "GET",
-    data = null,
-    headers,
-    responseType,
-    timeout
-  } = config;
+  return new Promise((resolve, reject) => {
+    const {
+      url,
+      method = "GET",
+      data = null,
+      headers,
+      timeout,
+      withCredentials,
+      responseType
+    } = config;
 
-  const xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
 
-  // method.toUpperCase() 将方法转换为大写
-  xhr.open(method.toUpperCase(), url, true);
+    // method.toUpperCase() 将方法转换为大写
+    xhr.open(method.toUpperCase(), url, true);
 
-  // 设置请求头
-  if (headers) {
-    Object.keys(headers).forEach((name) => {
-      xhr.setRequestHeader(name, headers[name]);
-    });
-  }
+    // 传递了响应类型，设置响应类型
+    if (responseType) {
+      xhr.responseType = responseType;
+    }
 
-  xhr.send(data);
+    // 传递了超时时间，设置超时时间
+    if (timeout) {
+      xhr.timeout = timeout;
+    }
+
+    // 传递了cookie，设置cookie
+    if (withCredentials) {
+      xhr.withCredentials = withCredentials;
+    }
+
+    // 设置请求头
+    if (headers) {
+      Object.keys(headers).forEach((name) => {
+        xhr.setRequestHeader(name, headers[name]);
+      });
+    }
+
+    // 监听请求状态
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === 4) {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(xhr.response);
+        }
+      }
+    };
+
+    // 发送请求
+    xhr.send(data);
+  });
 }
 ```
 
-### 3.在 types 文件夹 的中 index.ts
+### 4.在 types 文件夹 的中 index.ts
 
 ```js
 export type Method =
@@ -193,10 +252,20 @@ export interface AxiosRequestConfig {
   headers?: any; // 请求头
   timeout?: number; // 超时时间
   withCredentials?: boolean; // 是否携带cookie
+  responseType?: XMLHttpRequestResponseType; // 响应类型
+}
+
+export interface AxiosResponse {
+  data: any;
+  status: number;
+  statusText: string;
+  headers: any;
+  config: AxiosRequestConfig;
+  request: XMLHttpRequest;
 }
 ```
 
-### 4.helpers 文件夹的 data.ts 中
+### 5.helpers 文件夹的 data.ts 中
 
 ```js
 import { isObject } from "./utils";
@@ -208,12 +277,30 @@ export function transformRequest(data: any) {
 }
 ```
 
-### 5.helpers 文件夹的 headers.ts 中
+### 6.helpers 文件夹的 headers.ts 中
 
 ```js
 import { isObject } from "./utils";
+
+function normalizeHeaderName(headers: any, normalizeName: string) {
+  if (!headers) {
+    return;
+  }
+  Object.keys(headers).forEach((name) => {
+    if (
+      name !== normalizeName &&
+      name.toUpperCase() === normalizeName.toUpperCase()
+    ) {
+      headers[normalizeName] = headers[name];
+      delete headers[name];
+    }
+  });
+}
+
 export function processHeaders(config: AxiosRequestConfig) {
   const { headers = {}, data } = config;
+  // 处理Content-Type 比如传入的对象是{content-type: 'application/json'}，需要转换为{Content-Type: 'application/json'}
+  normalizeHeaderName(headers, "Content-Type");
   if (isObject(data)) {
     if (headers && !headers["Content-Type"]) {
       headers["Content-Type"] = "application/json;charset=utf-8";
@@ -223,7 +310,7 @@ export function processHeaders(config: AxiosRequestConfig) {
 }
 ```
 
-### 6.helpers 文件夹的 url.ts 中
+### 7.helpers 文件夹的 url.ts 中
 
 ```js
 import { isDate, isObject } from "./utils";
@@ -303,7 +390,7 @@ export function buildURL(url: string, params?: any) {
 }
 ```
 
-### 7.helpers 文件夹的 utils.ts 中
+### 8.helpers 文件夹的 utils.ts 中
 
 ```js
 const toSting = Object.prototype.toString; // 优化，做一个缓存，不要频繁调用，这里只读一次

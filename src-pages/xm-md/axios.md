@@ -128,6 +128,7 @@ btnPost.addEventListener("click", () => {
   axios({
     url: "/user/12345",
     method: "post",
+    // responseType: "json", // 这个一般是不写的，所以要处理下默认值
     data: {
       a: 1,
       b: 2
@@ -142,12 +143,14 @@ btnPost.addEventListener("click", () => {
 import type { AxiosRequestConfig } from "./types";
 import type { buildURL } from "./helpers/url";
 import xhr from "./xhr";
-import { transformRequest } from "./helpers/data";
+import { transformRequest, transformResponse } from "./helpers/data";
 import { processHeaders } from "./helpers/headers";
 
-function axios(config: AxiosRequestConfig) {
+function axios(config: AxiosRequestConfig): AxiosPromise {
   processConfig(config);
-  return xhr(config);
+  return xhr(config).then((res) => {
+    return transformResponseData(res);
+  });
 }
 
 function processConfig(config: AxiosRequestConfig) {
@@ -163,6 +166,11 @@ function transformURL(config: AxiosRequestConfig): string {
   return buildURL(url, params);
 }
 
+function transformResponseData(res: AxiosResponse): AxiosResponse {
+  res.data = transformResponse(res.data);
+  return res;
+}
+
 export default axios;
 ```
 
@@ -170,8 +178,9 @@ export default axios;
 
 ```js
 import type { AxiosRequestConfig } from "./types";
+import { parseHeaders } from "./helpers/headers";
 
-export default function xhr(config: AxiosRequestConfig) {
+export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
     const {
       url,
@@ -210,17 +219,54 @@ export default function xhr(config: AxiosRequestConfig) {
       });
     }
 
+    xhr.onerror = () => {
+      reject(new Error("Network Error"));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error(`Timeout of ${timeout} ms exceeded`));
+    };
+
     // 监听请求状态
     xhr.onreadystatechange = () => {
-      if (xhr.readyState === 4) {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(xhr.response);
-        }
+      if (xhr.readyState !== 4) {
+        return;
       }
+
+      // 超时和报错 状态也是0
+      if (xhr.status === 0) {
+        return;
+      }
+
+      // 获取响应头
+      const responseHeaders = parseHeaders(xhr.getAllResponseHeaders());
+
+      // 获取响应数据
+      const responseData =
+        responseType === "text" ? xhr.responseText : xhr.response;
+
+      const response: AxiosResponse = {
+        data: responseData,
+        status: xhr.status,
+        statusText: xhr.statusText,
+        headers: responseHeaders,
+        config,
+        request: xhr
+      };
+
+      handlerResponse(response);
     };
 
     // 发送请求
     xhr.send(data);
+
+    const handlerResponse = (response: AxiosResponse) => {
+      if (response.status >= 200 && response.status < 304) {
+        resolve(response);
+      } else {
+        reject(new Error(`Request failed with status code ${response.status}`));
+      }
+    };
   });
 }
 ```
@@ -255,26 +301,39 @@ export interface AxiosRequestConfig {
   responseType?: XMLHttpRequestResponseType; // 响应类型
 }
 
-export interface AxiosResponse {
-  data: any;
+export interface AxiosResponse<T = any> {
+  data: T;
   status: number;
   statusText: string;
   headers: any;
   config: AxiosRequestConfig;
   request: XMLHttpRequest;
 }
+
+export interface AxiosPromise<T = any> extends Promise<AxiosResponse<T>> {}
 ```
 
 ### 5.helpers 文件夹的 data.ts 中
 
 ```js
 import { isObject } from "./utils";
+
 export function transformRequest(data: any) {
   if (isObject(data)) {
     return JSON.stringify(data);
   }
   return data;
 }
+
+export function transformResponse(data: any) {
+  if (typeof data === "string") {
+    try {
+      data = JSON.parse(data);
+    } catch (error) {
+      // do nothing
+    }
+  }
+  return data;
 ```
 
 ### 6.helpers 文件夹的 headers.ts 中
@@ -307,6 +366,27 @@ export function processHeaders(config: AxiosRequestConfig) {
     }
   }
   return headers;
+}
+
+export function parseHeaders(headers: string): any {
+  let parsed = Object.create(null);
+  if (!headers) {
+    return parsed;
+  }
+  // 将响应头转换为对象
+  // headers: "content-length: 8\r\ncontent-type: application/json;charset=utf-8\r\n"
+  headers.split("\r\n").forEach((line) => {
+    let [key, val] = line.split(": ");
+    key = key.trim().toLowerCase();
+    if (!key) {
+      return;
+    }
+    if (val) {
+      val = val.trim();
+    }
+    parsed[key] = val;
+  });
+  return parsed;
 }
 ```
 

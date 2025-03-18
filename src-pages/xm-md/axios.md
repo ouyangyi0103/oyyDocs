@@ -88,7 +88,9 @@ axios({
   ├── node_moduls
   ├── src
       └── core
-      │     └── index.ts
+      │     └── dispatchRequest.ts
+      │     └── Axios.ts
+      │     └── xhr.ts
       └── types
       │    └── index.ts
       └── helpers
@@ -96,8 +98,8 @@ axios({
       │    └── utils.ts
       │    └── data.ts
       │    └── headers.ts
+      ├── axios.ts
       ├── index.ts
-      ├── xhr.ts
   ├── index.html
   ├── main.ts
   ├── package-lock.json
@@ -108,7 +110,7 @@ axios({
 ### 1. 在 main.ts 中
 
 ```js
-import axios from "./src/index";
+import axios, { AxiosRequestConfig } from "./src/index";
 
 const btnGet = document.getElementById("btnGet");
 const btnPost = document.getElementById("btnPost");
@@ -137,16 +139,161 @@ btnPost.addEventListener("click", () => {
 });
 ```
 
+### 2.在 src 的 axios.ts 中
+
+```js
+import Axios from "./core/Axios";
+import type {AxiosInstance} from './types'
+
+function createInstance(): AxiosInstance {
+  const context = new Axios();
+  const instance = Axios.prototype.request.bind(context);
+  return instance as AxiosInstance;
+}
+
+const axios = createInstance();
+
+export default axios;
+```
+
 ### 2.在 src 的 index.ts 中
 
 ```js
-import type { AxiosRequestConfig } from "./types";
-import type { buildURL } from "./helpers/url";
-import xhr from "./xhr";
-import { transformRequest, transformResponse } from "./helpers/data";
-import { processHeaders } from "./helpers/headers";
+import axios from "./axios";
 
-function axios(config: AxiosRequestConfig): AxiosPromise {
+/**
+ * 为什么不直接引入axios这个文件，主要是要在这里导出类型，可以在matin.ts中使用类型
+ */
+export * from "./types";
+
+export default axios;
+```
+
+### 4.在 types 文件夹 的中 index.ts
+
+```js
+export type Method =
+  | "get"
+  | "GET"
+  | "delete"
+  | "DELETE"
+  | "head"
+  | "HEAD"
+  | "options"
+  | "OPTIONS"
+  | "post"
+  | "POST"
+  | "put"
+  | "PUT"
+  | "patch"
+  | "PATCH";
+
+export interface AxiosRequestConfig {
+  url: string; // 请求的url
+  method?: Method; // 请求的方法
+  data?: any; // post请求的数据
+  params?: any; // get请求的参数
+  headers?: any; // 请求头
+  timeout?: number; // 超时时间
+  withCredentials?: boolean; // 是否携带cookie
+  responseType?: XMLHttpRequestResponseType; // 响应类型
+}
+
+export interface AxiosResponse<T = any> {
+  data: T;
+  status: number;
+  statusText: string;
+  headers: any;
+  config: AxiosRequestConfig;
+  request: XMLHttpRequest;
+}
+
+export interface AxiosPromise<T = any> extends Promise<AxiosResponse<T>> {}
+
+export interface Axios {
+  request(config: AxiosRequestConfig): AxiosPromise;
+  get(url: string, config?: AxiosRequestConfig): AxiosPromise;
+  post(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise;
+  delete(url: string, config?: AxiosRequestConfig): AxiosPromise;
+  head(url: string, config?: AxiosRequestConfig): AxiosPromise;
+  options(url: string, config?: AxiosRequestConfig): AxiosPromise;
+  put(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise;
+  patch(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise;
+}
+
+export interface AxiosInstance extends Axios {
+  (config: AxiosRequestConfig): AxiosPromise;
+}
+```
+
+### 1. 在 core 文件夹中的 Axios.ts
+
+```js
+import { AxiosRequestConfig, AxiosPromise } from "../types";
+import dispatchRequest from "./dispatchRequest";
+
+export default class Axios {
+  public request(config: AxiosRequestConfig): AxiosPromise {
+    return dispatchRequest(config);
+  }
+
+  public get(url: string, config?: AxiosRequestConfig): AxiosPromise {
+    return this._requestMethodWithOutData("get", url, config);
+  }
+
+  public delete(url: string, config?: AxiosRequestConfig): AxiosPromise {
+    return this._requestMethodWithOutData("delete", url, config);
+  }
+
+  public head(url: string, config?: AxiosRequestConfig): AxiosPromise {
+    return this._requestMethodWithOutData("head", url, config);
+  }
+
+  public options(url: string, config?: AxiosRequestConfig): AxiosPromise {
+    return this._requestMethodWithOutData("options", url, config);
+  }
+
+  public post(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise {
+    return this._requestMethodWithData("post", url, data, config);
+  }
+
+  public put(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise {
+    return this._requestMethodWithData("post", url, data, config);
+  }
+
+  public patch(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise {
+    return this._requestMethodWithData("post", url, data, config);
+  }
+
+  private _requestMethodWithOutData(
+    method: Method,
+    url: string,
+    config: AxiosRequestConfig
+  ): AxiosPromise {
+    return this.request({ ...config, method, url });
+  }
+
+  private _requestMethodWithData(
+    method: Method,
+    url: string,
+    data?: any,
+    config: AxiosRequestConfig
+  ): AxiosPromise {
+    return this.request({ ...config, method, url, data });
+  }
+}
+```
+
+### 1. 在 core 文件夹中的 dispatchRequest.ts
+
+```js
+import type { AxiosRequestConfig } from "../types";
+import type { buildURL } from "../helpers/url";
+import xhr from "./xhr";
+import { transformRequest, transformResponse } from "../helpers/data";
+import { processHeaders } from "../helpers/headers";
+
+export default function dispatchRequest(config: AxiosRequestConfig): AxiosPromise {
   processConfig(config);
   return xhr(config).then((res) => {
     return transformResponseData(res);
@@ -174,11 +321,11 @@ function transformResponseData(res: AxiosResponse): AxiosResponse {
 export default axios;
 ```
 
-### 3.在 src 的 xhr.ts 文件
+### 3.在 core 文件夹中 的 xhr.ts 文件
 
 ```js
-import type { AxiosRequestConfig } from "./types";
-import { parseHeaders } from "./helpers/headers";
+import type { AxiosRequestConfig } from "../types";
+import { parseHeaders } from "../helpers/headers";
 
 export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
@@ -269,48 +416,6 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
     };
   });
 }
-```
-
-### 4.在 types 文件夹 的中 index.ts
-
-```js
-export type Method =
-  | "get"
-  | "GET"
-  | "delete"
-  | "DELETE"
-  | "head"
-  | "HEAD"
-  | "options"
-  | "OPTIONS"
-  | "post"
-  | "POST"
-  | "put"
-  | "PUT"
-  | "patch"
-  | "PATCH";
-
-export interface AxiosRequestConfig {
-  url: string; // 请求的url
-  method?: Method; // 请求的方法
-  data?: any; // post请求的数据
-  params?: any; // get请求的参数
-  headers?: any; // 请求头
-  timeout?: number; // 超时时间
-  withCredentials?: boolean; // 是否携带cookie
-  responseType?: XMLHttpRequestResponseType; // 响应类型
-}
-
-export interface AxiosResponse<T = any> {
-  data: T;
-  status: number;
-  statusText: string;
-  headers: any;
-  config: AxiosRequestConfig;
-  request: XMLHttpRequest;
-}
-
-export interface AxiosPromise<T = any> extends Promise<AxiosResponse<T>> {}
 ```
 
 ### 5.helpers 文件夹的 data.ts 中

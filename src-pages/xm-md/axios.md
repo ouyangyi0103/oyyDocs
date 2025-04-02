@@ -88,6 +88,7 @@ axios({
   ├── node_moduls
   ├── src
       └── core
+      │     └── interceptorManager.ts
       │     └── dispatchRequest.ts
       │     └── Axios.ts
       │     └── xhr.ts
@@ -139,15 +140,50 @@ btnPost.addEventListener("click", () => {
 });
 ```
 
-### 2.在 src 的 axios.ts 中
+### 2.helpers 文件夹的 utils.ts 中
+
+```js
+const toSting = Object.prototype.toString; // 优化，做一个缓存，不要频繁调用，这里只读一次
+
+export const isDate = (val: any): val is Date => {
+  // val is Date 是一个类型守卫，有类型守卫那么在调用的时候就有提示，如果返回值为true，那么val就是Date类型，如果返回值为false，那么val就是其他类型
+  // 判断是不是日期
+  return toSting.call(val) === "[object Date]";
+};
+
+export const isObject = (val: any): val is Object => {
+  // 判断是不是对象
+  // return val !== null && typeof val === "object";
+
+  // 判断是不是纯对象
+  return toSting.call(val) === "[object Object]";
+};
+
+export const extend = <T,U>(to:T,from:U): T & U => {
+  const keys = Object.getOwnPropertyNames(from);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if(key != 'constructor'){
+      // @ts-ignore
+      to[key] = from[key]
+    }
+  }
+  return to as T & U;
+}
+```
+
+### 3.在 src 的 axios.ts 中
 
 ```js
 import Axios from "./core/Axios";
-import type {AxiosInstance} from './types'
+import type {AxiosInstance} from './types';
+import {extend} from './helpers/utils';
 
 function createInstance(): AxiosInstance {
   const context = new Axios();
   const instance = Axios.prototype.request.bind(context);
+  extend(instance, Axios.prototype);
+  extend(instance, context);
   return instance as AxiosInstance;
 }
 
@@ -156,7 +192,7 @@ const axios = createInstance();
 export default axios;
 ```
 
-### 2.在 src 的 index.ts 中
+### 4.在 src 的 index.ts 中
 
 ```js
 import axios from "./axios";
@@ -169,7 +205,7 @@ export * from "./types";
 export default axios;
 ```
 
-### 4.在 types 文件夹 的中 index.ts
+### 5.在 types 文件夹 的中 index.ts
 
 ```js
 export type Method =
@@ -211,30 +247,158 @@ export interface AxiosResponse<T = any> {
 export interface AxiosPromise<T = any> extends Promise<AxiosResponse<T>> {}
 
 export interface Axios {
-  request(config: AxiosRequestConfig): AxiosPromise;
-  get(url: string, config?: AxiosRequestConfig): AxiosPromise;
-  post(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise;
-  delete(url: string, config?: AxiosRequestConfig): AxiosPromise;
-  head(url: string, config?: AxiosRequestConfig): AxiosPromise;
-  options(url: string, config?: AxiosRequestConfig): AxiosPromise;
-  put(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise;
-  patch(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise;
+  interceptors: {
+    request: AxiosInterceptorManager<AxiosRequestConfig>,
+    response: AxiosInterceptorManager<AxiosResponse>
+  }
+  request<T = any>(config: AxiosRequestConfig): AxiosPromise<T>;
+  get<T = any>(url: string, config?: AxiosRequestConfig): AxiosPromise<T>;
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise<T>;
+  delete<T = any>(url: string, config?: AxiosRequestConfig): AxiosPromise<T>;
+  head<T = any>(url: string, config?: AxiosRequestConfig): <T>;
+  options<T = any>(url: string, config?: AxiosRequestConfig): AxiosPromise<T>;
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise<T>;
+  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): AxiosPromise<T>;
+}
+
+export interface AxiosInterceptorManager<T> {
+  use(resolved: ResolvedFn<T>, rejected?: RejectedFn): number
+  eject(id: number): viod
 }
 
 export interface AxiosInstance extends Axios {
-  (config: AxiosRequestConfig): AxiosPromise;
+  <T = any>(config: AxiosRequestConfig): AxiosPromise;
+}
+
+export interface ResovedFn<T = any> {
+  (val: T): T | Promise<T>
+}
+
+export interface RejectedFn<T = any> {
+  (error: any): any
 }
 ```
 
-### 1. 在 core 文件夹中的 Axios.ts
+### 6. 在 core 文件夹中的 interceptorManager.ts
 
 ```js
-import { AxiosRequestConfig, AxiosPromise } from "../types";
+import type { ResovedFn, RejectedFn } from "../types";
+
+interface Interceptor<T> {
+  resolved: ResolvedFn<T>
+  rejected?: RejectedFn
+}
+
+export default class InterceptorManager<T> {
+  private interceptors: Array<Interceptor<T> | null>
+  constructor() {
+    this.interceptors = [];
+  }
+
+  // axios.interceptors.request.use((config) => {
+  //   config.headers.xxx = 'xxxxxx'
+  //   return config;
+  // },(err)=>{
+  //   return Promise.reject(err)
+  // })
+
+  use(resolved: ResolvedFn<T>, rejected?: RejectedFn): number{
+    this.interceptors.push({
+      resolved,
+      rejected
+    })
+
+    // [
+    //   {
+    //     resolved: (config) => {......},
+    //     rejected: (err) => {......}
+    //   },
+    //   {
+    //     resolved: (config) => {......},
+    //     rejected: (err) => {......}
+    //   }
+    // ]
+
+    return this.interceptors.length - 1;
+  }
+
+  // 这里为什么不直接将后面的数据删除，而是设置为null，因为这样是不会影响数组的长度的
+  eject(id: number): void {
+    // [
+    //   {
+    //     resolved: (config) => {......},
+    //     rejected: (err) => {......}
+    //   },
+    // null
+    // ]
+    if(this.interceptors[id]){
+      this.interceptors[id] = null
+    }
+  }
+
+  forEach(fn: (interceptor: Interceptors<T>) => void): void {
+    this.intercepotors.forEach(interceptor => {
+      if(interceptor !== null){
+        fn(interceptor);
+      }
+    })
+  }
+}
+```
+
+### 7. 在 core 文件夹中的 Axios.ts
+
+```js
+import { AxiosRequestConfig, AxiosPromise, Method, AxiosResponse, ResolvedFn, RejectedFn} from "../types";
 import dispatchRequest from "./dispatchRequest";
+import InterceptorManager from './interceptorManager'
+
+interface Interceptors {
+  requset: InterceptorManager<AxiosRequestConfig>
+  response: InterceptorManager<AxiosResponse>
+}
+
+interface PromiseChain<T> {
+  resolved: ResolvedFn<T> | ((config: AxiosRequestConfig) => AxiosPromise)
+  rejected?: RejectedFn
+}
 
 export default class Axios {
+  public interceptors: Interceptors
+
+  constructor(){
+    this.interceptors = {
+      request: new InterceptorManager<AxiosRequestConfig>(),
+      response: new InterceptorManager<AxiosResponse>()
+    }
+  }
+
+  // 中间件
   public request(config: AxiosRequestConfig): AxiosPromise {
-    return dispatchRequest(config);
+    //chain = [Promise.resolve, Promise.resolve, 请求, response, response, result]
+    const chain: PromiseChain<any>[] = [{
+      resolved: dispatchRequest,
+      rejected: undefined
+    }]
+
+    // requset后添加的先执行
+    this.interceptor.requset.forEach(interceptor => {
+      chain.unshift(interceptor)
+    })
+
+    // response先添加的先执行
+    this.interceptor.response.forEach(interceptor => {
+      chain.push(interceptor)
+    })
+
+    let promise = Promise.resolve(config);
+    //chain =  [Promise.resolve, Promise.resolve, 请求, response, response, result]
+    while(chain.length){
+      const { resolved, rejected } = chain.shift()!
+      promise = promise.then(resolved, rejected)
+    }
+
+    return promise as unknown as AxiosPromise;
   }
 
   public get(url: string, config?: AxiosRequestConfig): AxiosPromise {
@@ -284,7 +448,7 @@ export default class Axios {
 }
 ```
 
-### 1. 在 core 文件夹中的 dispatchRequest.ts
+### 8. 在 core 文件夹中的 dispatchRequest.ts
 
 ```js
 import type { AxiosRequestConfig } from "../types";
@@ -321,7 +485,7 @@ function transformResponseData(res: AxiosResponse): AxiosResponse {
 export default axios;
 ```
 
-### 3.在 core 文件夹中 的 xhr.ts 文件
+### 9.在 core 文件夹中 的 xhr.ts 文件
 
 ```js
 import type { AxiosRequestConfig } from "../types";
@@ -418,7 +582,7 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
 }
 ```
 
-### 5.helpers 文件夹的 data.ts 中
+### 10.helpers 文件夹的 data.ts 中
 
 ```js
 import { isObject } from "./utils";
@@ -441,7 +605,7 @@ export function transformResponse(data: any) {
   return data;
 ```
 
-### 6.helpers 文件夹的 headers.ts 中
+### 11.helpers 文件夹的 headers.ts 中
 
 ```js
 import { isObject } from "./utils";
@@ -495,7 +659,7 @@ export function parseHeaders(headers: string): any {
 }
 ```
 
-### 7.helpers 文件夹的 url.ts 中
+### 12.helpers 文件夹的 url.ts 中
 
 ```js
 import { isDate, isObject } from "./utils";
@@ -573,24 +737,4 @@ export function buildURL(url: string, params?: any) {
   }
   return url;
 }
-```
-
-### 8.helpers 文件夹的 utils.ts 中
-
-```js
-const toSting = Object.prototype.toString; // 优化，做一个缓存，不要频繁调用，这里只读一次
-
-export const isDate = (val: any): val is Date => {
-  // val is Date 是一个类型守卫，有类型守卫那么在调用的时候就有提示，如果返回值为true，那么val就是Date类型，如果返回值为false，那么val就是其他类型
-  // 判断是不是日期
-  return toSting.call(val) === "[object Date]";
-};
-
-export const isObject = (val: any): val is Object => {
-  // 判断是不是对象
-  // return val !== null && typeof val === "object";
-
-  // 判断是不是纯对象
-  return toSting.call(val) === "[object Object]";
-};
 ```

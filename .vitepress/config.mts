@@ -3,8 +3,7 @@ import { defineConfig } from "vitepress";
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "oyy Project",
-  description:
-    "无人扶我青云志，我自踏雪至山巅。若是命中无此运，孤身亦可登昆仑。",
+  description: "无人扶我青云志，我自踏雪至山巅。若是命中无此运，孤身亦可登昆仑。",
   // 打包输出目录
   outDir: "docs",
   // 根路径
@@ -28,14 +27,13 @@ export default defineConfig({
           { text: "一、jq源码", link: "src-pages/xm-md/jq" },
           { text: "二、项目埋点与监控SDK设计", link: "src-pages/xm-md/track" },
           { text: "三、monorepo与pnpm的原理", link: "src-pages/xm-md/monorepo" },
-          { text: "四、axios原理", link: "src-pages/xm-md/axios" }
+          { text: "四、axios原理", link: "src-pages/xm-md/axios" },
+          { text: "五、vue-router4源码", link: "src-pages/xm-md/vue-router4" }
         ]
       }
     ],
     // 右上角图标
-    socialLinks: [
-      { icon: "github", link: "https://github.com/vuejs/vitepress" }
-    ],
+    socialLinks: [{ icon: "github", link: "https://github.com/vuejs/vitepress" }],
     // 底部页脚
     docFooter: {
       prev: "上一页",

@@ -56,9 +56,10 @@ declare module "*.vue" {
 
 ```ts
 import { defineComponent, App } from "vue";
+import type { RouterHistory } from "../history/h5";
 
 export interface RouterOptions {
-  history: History;
+  history: RouterHistory;
   routes: RouteRecordRaw[];
 }
 
@@ -177,6 +178,15 @@ export * from "./types";
 ### 5. history/h5.ts
 
 ```ts
+function buildState(back: number, current: string, forward: number, replace: boolean = false) {
+  return {
+    back,
+    current,
+    forward,
+    replace
+  };
+}
+
 function createCurrentLocation(base: string = ""): string {
   /**
    * @pathname www.baidu.com/a/b/c 读取的是 /a/b/c
@@ -186,21 +196,109 @@ function createCurrentLocation(base: string = ""): string {
   const { pathname, search, hash } = window.location;
   // 如果是hash
   if (base.includes("#")) {
-    return base + hash;
+    return base.slice(1) || "/";
   }
-  return base + pathname + search + hash;
+  return pathname + hash + search;
 }
 
 function useHistoryNavigator(base: string = ""): History {
+  // 当前路径存一下
   const currentLocation = { value: createCurrentLocation(base) };
+
+  // 路由的状态  history是会发起请求的
+  // 返回的路径 当前的路径  前进的路径 是否是replace 用户的参数 都是存放在 history.state 里面
+  const historyState = {
+    value: window.history.state
+  };
+
+  function changeLocation(to: string, state: any, replace: boolean = false) {
+    const url = base.includes("#") ? `${base}${to}` : `${to}`;
+    window.history[replace ? "replaceState" : "pushState"](state, "", url);
+    // 本地记录一下状态
+    historyState.value = state;
+  }
+
+  // 首次进入的时候，需要把当前的路径设置为返回的路径
+  if (!historyState.value) {
+    // 也就是一进页面的时候，进行了 / 跳 / ，并且用的是repalce跳转，无历史记录
+    changeLocation(currentLocation.value, buildState(0, currentLocation.value, 0, true), false);
+  }
+
+  function push(to: string, data?: any) {
+    // 触发前进
+    const currentState = Object.assign({}, historyState.value, {
+      forward: to
+    });
+    // 记录一下 没有真实的跳转 只是记录了一下状态，也就是自己跳自己了 在这里可以加 生命周期，跳转之前做些什么
+    changeLocation(currentState.current, currentState, true);
+    // 实现真正的跳转
+    const state = Object.assign({}, buildState(currentState.current, to, 0, false), data); // 合并状态，将data中的query和params合并到state中
+    changeLocation(to, state, false);
+    currentLocation.value = to;
+  }
+
+  function replace(to: string, data?: any) {
+    const state = Object.assign({}, buildState(historyState.value.back, to, historyState.value.forward, true), data);
+    changeLocation(to, state, true);
+    currentLocation.value = to;
+  }
+
+  return {
+    location: currentLocation,
+    state: historyState,
+    push,
+    replace
+  };
 }
 
-function useHistoryListener(history: History) {}
+function useHistoryListener(base: string, state: any, currentLocation: { value: string }) {
+  const listeners: Function[] = [];
+
+  function listen(fn: Function) {
+    listeners.push(fn);
+  }
+
+  // 监听路由的变化
+  window.addEventListener("popstate", ({ state }) => {
+    const to = createCurrentLocation(base); // 当前路径
+    const from = currentLocation.value; // 上一次的路径
+
+    // 更新状态
+    historyState.state = state;
+    // 更新路径
+    currentLocation.value = to;
+    // 执行监听函数
+    listeners.forEach(cb => cb(to, from));
+  });
+
+  return {
+    listen
+  };
+}
 
 export function createWebHistory(base: string = ""): History {
   // 这个函数里面实现 push replace 等方法
-  useHistoryNavigator(base);
+  const historyNavigator = useHistoryNavigator(base);
+
+  // 实现监听
+  const historyListener = useHistoryListener(base, historyNavigator.state, historyNavigator.location);
+
+  // 合并
+  const routerHistory = Object.assign({}, historyNavigator, historyListener);
+
+  // 去除.value，方便使用
+  Object.defineProperty(routerHistory, "location", {
+    get: () => historyNavigator.location.value
+  });
+
+  Object.defineProperty(routerHistory, "state", {
+    get: () => historyNavigator.state.value
+  });
+
+  return routerHistory;
 }
+
+export type RouterHistory = ReturnType<typeof createWebHistory>;
 ```
 
 ### 6. history/hash.ts

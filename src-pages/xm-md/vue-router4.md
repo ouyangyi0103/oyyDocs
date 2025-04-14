@@ -75,6 +75,8 @@ export interface Router {
   install(app: App): void;
   push(to: string | RouteLocationRaw): void;
   replace(to: string | RouteLocationRaw): void;
+  resolve(to: string | RouteLocationRaw): { path: string; matched: any[] };
+  finaLiazeNavigation(to: string | RouteLocationRaw, from: string | RouteLocationRaw, replace: boolean): void;
 }
 ```
 
@@ -109,6 +111,7 @@ import RouterLink from "./router-link";
 import RouterView from "./router-view";
 import { ROUTER_KEY, ROUTE_KEY } from "./config";
 import type { RouterOptions, RouteRecordRaw } from "./types";
+import { createMatcher } from "./matcher/create-matcher";
 
 // 定义一个常量，用于存储路由的规范化路径
 const ROUTE_NORMALIZED = {
@@ -137,9 +140,13 @@ export const useRoute = (): Route => {
 };
 
 export const createRouter = (options: RouterOptions): Router => {
+  const routerHistory = options.history
+
   // 创建一个响应式对象，用于存储当前路由，ROUTE_NORMALIZED里面的值就不是响应式的了，这个给自己用
   // 但是用户使用的时候，里面的值需要响应式，可以自己用 reactive 包装一下
   const currentRoute = shallowRef(ROUTE_NORMALIZED);
+
+  const matcher = createMatcher(options.routes);
 
   class Router implements Router {
     constructor(options: RouterOptions) {
@@ -163,6 +170,41 @@ export const createRouter = (options: RouterOptions): Router => {
       app.component("RouterLink", RouterLink);
       app.component("RouterView", RouterView);
       app.config.globalProperties.$router = this;
+    }
+
+    finaLiazeNavigation(to,from,replace = false){
+      if(from === ROUTE_NORMALIZED){
+        // 说明是第一次
+      }else  if(replace){
+        routerHistory.replace(to.path)
+      }else{
+        routerHistory.push(to.path)
+      }
+
+      currentRoute.value = to
+    }
+
+    // 给this定义类型，只有TS才能这么写，to还是第一个参数
+    push(this: Router,to){
+      const targetLocation = this.resolve(to)
+      const from = currentRoute.value
+      this.finaLiazeNavigation(targetLocation,from,false)
+    }
+
+    replace(this: Router,to){
+
+    }
+
+    resolve(to: string | RouteLocationRaw){
+      /**
+       * router.push('xxx')
+       * router.push({path: 'xxx'})
+       */
+      if(typeof to === 'string'){
+        return matcher.resolve({path: to})
+      }else{
+        return matcher.resolve(to)
+      }
     }
   }
 
@@ -196,7 +238,7 @@ function createCurrentLocation(base: string = ""): string {
   const { pathname, search, hash } = window.location;
   // 如果是hash
   if (base.includes("#")) {
-    return base.slice(1) || "/";
+    return hash.slice(1) || "/";
   }
   return pathname + hash + search;
 }
@@ -315,7 +357,81 @@ export function createWebHashHistory(): History {
 ### 7. matcher/create-matcher.ts 匹配器
 
 ```ts
+import type { RouterOptions, RouteRecordRaw } from "../types";
 
+function copyRoute(route: RouteRecordRaw) {
+  return {
+    name: route.name,
+    path: route.path,
+    meta: route.meta,
+    children: route.children || [],
+    components: {
+      default: route.component
+    }
+  };
+}
+
+function createRouteRecordMatcher(record, parent) {
+  const matcher = {
+    path: record.path,
+    record,
+    parent,
+    children: []
+  };
+
+  if (parent) {
+    parent.children.push(matcher);
+  }
+
+  return matcher;
+}
+
+export function createMatcher(routes: RouterOptions["routes"]) {
+  // 打平的路由存放在这里
+  const matchers: ReturnType<typeof createRouteRecordMatcher>[] = [];
+
+  // 添加路由
+  function addRouter(route: RouteRecordRaw, parent?) {
+    const normalizedRecord = copyRoute(route, parent);
+    if (parent) {
+      normalizedRecord.path = `${parent.path}/${normalizedRecord.path}`;
+    }
+
+    // 组装父子关系
+    const matcher = createRouteRecordMatcher(normalizedRecord, parent);
+
+    if (normalizedRecord.children.length > 0) {
+      normalizedRecord.children.forEach(child => addRouter(child, matcher));
+    }
+
+    matchers.push(matcher);
+  }
+
+  // 匹配路由
+  function resolve(to: {path: string}) {
+    const matched: any:[] = []
+    let path = to.path
+    let matcher = matchers.find(m => m.path === path)
+
+    while (matcher) {
+      // 为什么是unshift，因为父级在前面
+      matched.unshift(matcher.record);
+      matcher = matcher.parent;
+    }
+
+    return {
+      path,
+      matched
+    };
+  }
+
+  routes.forEach(route => addRouter(route));
+
+  return {
+    addRouter,
+    resolve
+  };
+}
 ```
 
 ### 8. router-link.ts

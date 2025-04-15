@@ -140,6 +140,7 @@ export const useRoute = (): Route => {
 };
 
 export const createRouter = (options: RouterOptions): Router => {
+  let lock = false;
   const routerHistory = options.history
 
   // 创建一个响应式对象，用于存储当前路由，ROUTE_NORMALIZED里面的值就不是响应式的了，这个给自己用
@@ -170,11 +171,27 @@ export const createRouter = (options: RouterOptions): Router => {
       app.component("RouterLink", RouterLink);
       app.component("RouterView", RouterView);
       app.config.globalProperties.$router = this;
+
+      // 一进页面就需要执行一次
+      if (currentRoute.value === ROUTE_NORMALIZED) {
+        this.push(routerHistory.location);
+      }
+    }
+
+    markRady(){
+      if(lock) return;
+      lock = true;
+      routerHistory.listen((to) => {
+        const targetLocation = this.resolve(to)
+        const from = currentRoute.value
+        this.finaLiazeNavigation(targetLocation,from, true)
+      })
     }
 
     finaLiazeNavigation(to,from,replace = false){
       if(from === ROUTE_NORMALIZED){
         // 说明是第一次
+        this.markRady()
       }else  if(replace){
         routerHistory.replace(to.path)
       }else{
@@ -390,8 +407,53 @@ export function createMatcher(routes: RouterOptions["routes"]) {
   // 打平的路由存放在这里
   const matchers: ReturnType<typeof createRouteRecordMatcher>[] = [];
 
+  /**
+   * route = [
+   *  {
+   *    name: 'about',
+   *    path: '/about',
+   *    component: About,
+   *    children: [{
+    *      name: 'a',
+    *      path: 'a',
+    *      component: A,
+    *    },
+    *    {
+    *      name: 'b',
+    *      path: 'b',
+    *      component: B,
+    *    }
+   *    ]
+   *  }
+   * ]
+   */
+
   // 添加路由
   function addRouter(route: RouteRecordRaw, parent?) {
+    /**
+     * normalizedRecord = {
+      *  name: 'about',
+      *  path: '/about',
+      *  component: {
+      *    default: About
+      *  },
+      *  children: [{
+        *    name: 'a',
+        *    path: 'a',
+        *    component: {
+        *      default: A
+        *    },
+        *  },
+        *  {
+        *    name: 'b',
+        *    path: 'b',
+        *    component: {
+        *      default: B
+        *    }
+        *  }
+      * ]
+     * }
+     */
     const normalizedRecord = copyRoute(route, parent);
     if (parent) {
       normalizedRecord.path = `${parent.path}/${normalizedRecord.path}`;
@@ -437,7 +499,8 @@ export function createMatcher(routes: RouterOptions["routes"]) {
 ### 8. router-link.ts
 
 ```ts
-import { defineComponent, computed, h } from "vue";
+import { defineComponent, computed, h, inject } from "vue";
+import { ROUTE_KEY } from "./config";
 
 export const RouterLink = defineComponent({
   name: "RouterLink",
@@ -454,8 +517,13 @@ export const RouterLink = defineComponent({
       return h(
         "a",
         {
-          href: router.resolve(to.value).href,
-          ...props
+          onClick: () => {
+            if (props.replace) {
+              router.replace(to.value);
+            } else {
+              router.push(to.value);
+            }
+          }
         },
         slots.default?.() ?? "默认插槽"
       );
@@ -474,18 +542,27 @@ slots.default?.() 如果 default 有值，并且是个函数，则执行函数�
 ### 9. router-view.ts
 
 ```ts
-import { defineComponent, h } from "vue";
+import { defineComponent, h, inject, provide, computed } from "vue";
+import { useRoute } from "./index";
 
 export const RouterView = defineComponent({
   name: "RouterView",
-  setup() {
-    const route = useRoute();
-    const matched = computed(() => {
-      return route.matched;
-    });
+  setup(props, { slots }) {
+    // 数组从0开始，所以需要+1
+    const depath = inject("depth", 0);
+    // 获取路由
+    const route = useRoute() as any;
+    // 获取匹配的路由
+    const matchRouterRef = computed(() => route.matched[route.depth]);
+    // 提供深度
+    provide("depth", depath + 1);
     return () => {
-      const current = matched.value[route.depth];
-      return h(current.components.default);
+      const matchRoute = matchRouterRef.value;
+      const viewComponent = matchRoute?.component?.default;
+      if (!viewComponent) {
+        return slots.default?.() ?? "";
+      }
+      return h(viewComponent);
     };
   }
 });

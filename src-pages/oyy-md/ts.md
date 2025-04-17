@@ -272,7 +272,7 @@ var x: A = { name: "xx", age: 20 };
 
 ### 4. 属性修饰符
 
-#### 1. 可选属性
+#### 【1】. 可选属性
 
 可选属性是指在对象中可以存在也可以不存在的属性。
 
@@ -283,7 +283,7 @@ interface Person {
 }
 ```
 
-#### 2. 只读属性
+#### 【2】. 只读属性
 
 只读属性是指在对象中只能存在不能修改的属性。
 
@@ -299,7 +299,7 @@ const person: Person = {
 person.name = "789"; //错误
 ```
 
-#### 3. 索引签名
+#### 【3】. 索引签名
 
 索引签名是指在对象中可以存在多个属性，并且这些属性的类型可以不同。
 
@@ -317,7 +317,7 @@ const person: Person = {
 };
 ```
 
-#### 4. interface 定义函数类型
+#### 【4】. interface 定义函数类型
 
 函数类型定义是指在函数中可以存在多个参数，并且这些参数的类型可以不同。
 
@@ -333,9 +333,9 @@ const fn: Fn = (a, b) => {
 fn(1, 2);
 ```
 
-### 四、数组类型
+## 四、数组类型
 
-#### 1. 数组类型定义
+### 1. 数组类型定义
 
 数组类型定义是指在数组中可以存在多个元素，并且这些元素的类型可以不同。
 
@@ -345,7 +345,7 @@ let arr: number[] = [1, 2, 3];
 let arr2: Array<number> = [1, 2, 3];
 ```
 
-#### 2. 接口表示数组
+### 2. 接口表示数组
 
 一般用来描述类数组
 
@@ -357,7 +357,7 @@ interface Arr {
 let arr: Arr = [1, 2, 3];
 ```
 
-#### 3. 多维数组
+### 3. 多维数组
 
 ```ts
 let arr: number[][] = [
@@ -370,7 +370,7 @@ let arr2: Array<Array<number>> = [
 ];
 ```
 
-#### 4. arguments 类数组
+### 4. arguments 类数组
 
 arguments 是一个类数组对象，它包含了函数调用时传递的参数。
 
@@ -397,9 +397,9 @@ interface IArguments {
 }
 ```
 
-### 五、函数类型
+## 五、函数类型
 
-#### 1. 函数类型定义
+### 1. 函数类型定义
 
 ```ts
 //注意，参数不能多传，也不能少传 必须按照约定的类型来
@@ -409,7 +409,7 @@ const fn = (name: string, age: number): string => {
 fn("张三", 18);
 ```
 
-#### 2. 可选参数
+### 2. 可选参数
 
 ```ts
 //通过?表示该参数为可选参数
@@ -419,7 +419,7 @@ const fn = (name: string, age?: number): string => {
 fn("张三");
 ```
 
-#### 3. 默认参数
+### 3. 默认参数
 
 ```ts
 //通过=表示该参数为默认参数
@@ -428,7 +428,7 @@ const fn = (name: string, age: number = 18): string => {
 };
 ```
 
-#### 4. 剩余参数
+### 4. 剩余参数
 
 ```ts
 //通过...表示该参数为剩余参数
@@ -439,7 +439,7 @@ const fn = (name: string, ...args: number[]): string => {
 fn("张三", 1, 2, 3, 4, 5);
 ```
 
-#### 5. 接口定义函数类型
+### 5. 接口定义函数类型
 
 ```ts
 //定义参数 num 和 num2  ：后面定义返回值的类型
@@ -461,7 +461,7 @@ function getUserInfo(user: User): User {
 }
 ```
 
-#### 6.函数中的 this 类型
+### 6.函数中的 this 类型
 
 ts 中可以定义 this 的类型，在 js 中无法使用，必须是第一个参数定义 this 的类型
 
@@ -482,7 +482,7 @@ obj.add(4);
 console.log(obj.user);
 ```
 
-#### 7. 函数重载
+### 7. 函数重载
 
 重载是方法名字相同，而参数不同，返回类型可以相同也可以不同。
 
@@ -506,4 +506,69 @@ function findNum(ids?: number | number[]): number[] {
     return user;
   }
 }
+```
+
+## 六、联合类型-交叉类型-类型断言
+
+### 1. 联合类型
+
+联合类型是指一个变量可以有多种不同的类型。
+
+```ts
+let a: string | number = "123";
+a = 123;
+
+let fn = function (type: number | boolean): boolean {
+  return !!type;
+  // !! 这个可以进行强转
+  // 比如 !!0  那么会先 !0 true 然后!!0 返回true
+};
+```
+
+### 2. 交叉类型
+
+多种类型的集合，联合对象将具有所联合类型的所有成员
+
+```ts
+interface People {
+  age: number,
+  height： number
+}
+interface Man{
+  sex: string
+}
+const xiaoman = (man: People & Man) => {
+  console.log(man.age)
+  console.log(man.height)
+  console.log(man.sex)
+}
+xiaoman({age: 18,height: 180,sex: 'male'});
+```
+
+### 3. 类型断言
+
+类型断言是指在编译时，将一个变量的类型断言为另一个类型。
+
+```ts
+let fn = function (num: number | string): number {
+  let len = (num as string).length;
+  return len;
+};
+
+fn("123");
+
+-----------------------
+
+interface A {
+  run: string
+}
+
+interface B {
+  eat: string
+}
+
+let fn = (type: A | B): void => {
+  console.log((<A>type).run);
+};
+
 ```

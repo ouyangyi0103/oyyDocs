@@ -30,6 +30,10 @@ export default defineConfig({
           { text: "四、axios原理", link: "src-pages/xm-md/axios" },
           { text: "五、vue-router4源码", link: "src-pages/xm-md/vue-router4" }
         ]
+      },
+      {
+        text: "oyy",
+        items: [{ text: "一、TS", link: "src-pages/oyy-md/ts" }]
       }
     ],
     // 右上角图标

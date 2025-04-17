@@ -1,3 +1,14 @@
+---
+outline: deep
+head:
+  - - meta
+    - name: title
+      content: 自我学习
+  - - meta
+    - name: description
+      content: 自我学习，努力上进
+---
+
 ## 一、项目目录
 
 ```js
@@ -52,7 +63,7 @@ declare module "*.vue" {
 }
 ```
 
-### 2. types/index.ts
+### 2.types/index.ts
 
 ```ts
 import { defineComponent, App } from "vue";
@@ -80,7 +91,7 @@ export interface Router {
 }
 ```
 
-### 3. main.ts
+### 3.main.ts
 
 ```ts
 import { createApp } from "vue";
@@ -95,7 +106,7 @@ const router = createRouter({
 createApp(App).use(router).mount("#app");
 ```
 
-### 4. vue-router/index.ts
+### 4.vue-router/index.ts
 
 ```js
 // config / index.ts;

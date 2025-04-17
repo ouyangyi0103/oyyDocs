@@ -572,3 +572,64 @@ let fn = (type: A | B): void => {
 };
 
 ```
+
+## 七、class 类
+
+### 1. interface 进行类型约束
+
+```ts
+interface Options {
+  el: string | HTMLElement;
+  init(): viod;
+}
+
+interface VueCls {
+  options: Options;
+}
+
+class Vue implements VueCls {
+  options: Options;
+  constructor(options: Options) {
+    this.options = options;
+  }
+  init(): void {
+    console.log("init");
+  }
+}
+
+new Vue({
+  el: "#app",
+  data: {
+    msg: "hello"
+  }
+});
+```
+
+### 2. 类的继承
+
+```ts
+interface ManX {
+  sex: string;
+  height: number;
+}
+
+class Person {
+  name: string;
+  age: number;
+}
+
+class Man extends Person implements ManX {
+  sex: string;
+  height: number;
+  constructor(name: string, age: number, sex: string, height: number) {
+    super(name, age);
+    this.sex = sex;
+    this.height = height;
+  }
+}
+
+const man = new Man();
+man.name = "张三";
+man.age = 18;
+man.sex = "男";
+```

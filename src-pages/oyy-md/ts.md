@@ -930,14 +930,20 @@ const cats: Record<CatName, CatInfo> = {
   mordred: { age: 16, breed: "British Shorthair" }
 };
 console.log(cats.boris);
-function mapObject<K extends string | number, T, U>(obj: Record<K, T>, f: (x: T) => U): Record<K, U> {
+function mapObject<K extends string | number, T, U>(
+  obj: Record<K, T>,
+  f: (x: T) => U
+): Record<K, U> {
   let ret = <Record<K, U>>{};
   Object.keys(obj).map(key => {
     ret[key] = f(obj[key]);
   });
   return ret;
 }
-function mapObject<K extends string | number, T, U>(obj: Record<K, T>, f: (x: T) => U): Record<K, U> {
+function mapObject<K extends string | number, T, U>(
+  obj: Record<K, T>,
+  f: (x: T) => U
+): Record<K, U> {
   let res: any = {};
   for (let key in obj) {
     res[key] = f(obj[key]);
@@ -1026,7 +1032,11 @@ type MapToPromise<T> = {
 };
 type Tuple = [number, string, boolean];
 type PromiseTuple = MapToPromise<Tuple>;
-let tuple1: PromiseTuple = [new Promise((resolve, reject) => resolve(1)), new Promise((resolve, reject) => resolve("a")), new Promise((resolve, reject) => resolve(true))];
+let tuple1: PromiseTuple = [
+  new Promise((resolve, reject) => resolve(1)),
+  new Promise((resolve, reject) => resolve("a")),
+  new Promise((resolve, reject) => resolve(true))
+];
 ```
 
 ### 9.unknown
@@ -1757,6 +1767,8 @@ console.log(list); // [0,1,2,3,4]
 
 ## 十一、泛型
 
+泛型是 ts 中非常重要的一个特性，它允许我们在定义函数、接口或类的时候，不预先指定具体的类型，而是在使用的时候再指定类型。
+
 ```ts
 function Add<T>(a: T, b: T): Array<T> {
   return [a, b];
@@ -1820,6 +1832,8 @@ result(123);
 ```
 
 ### 2.泛型约束 extends 进行约束
+
+泛型约束 extends 进行约束，可以约束泛型参数必须满足某个条件，比如必须是某个类型或者必须具有某个属性。
 
 ```ts
 function add<T extends number>(a: T, b: T) {
@@ -2023,3 +2037,360 @@ namespace android {
   };
 }
 ```
+
+## 十四、模块化解析
+
+### 1.CommonJS 模块
+
+CommonJS 是 Node.js 的模块系统，它使用 require 和 module.exports 来导入和导出模块。
+
+```ts
+// 导出模块
+exports.name = "oyy";
+exports.age = 18;
+
+module.exports = {
+  name: "oyy",
+  age: 18
+};
+
+// 导入模块
+const { name, age } = require("./module");
+console.log(name, age);
+```
+
+### 2.AMD 模块
+
+AMD 是 Asynchronous Module Definition 的缩写，它是一种异步模块定义的模块系统。
+
+```ts
+// 导出模块
+define("module", ["jquery"], function ($) {
+  return {
+    name: "oyy",
+    age: 18
+  };
+});
+
+// 导入模块
+require(["module"], function (module) {
+  console.log(module);
+});
+```
+
+### 3.CMD 模块
+
+CMD 是 Common Module Definition 的缩写，它是一种同步模块定义的模块系统。
+
+```ts
+// 导出模块
+define(function (require, exports, module) {
+  let a = require("./a");
+  exports.name = "oyy";
+  exports.age = 18;
+});
+
+// 导入模块
+require(["module"], function (module) {
+  console.log(module);
+});
+```
+
+### 4.UMD 模块
+
+UMD 是 Universal Module Definition 的缩写，它是一种通用的模块定义的模块系统。是 AMD 和 CommonJS 的结合体。
+
+```ts
+// 导出模块
+(function (window, factory) {
+  // 检测是不是 Nodejs 环境
+  if (typeof module === "object" && typeof module.exports === "objects") {
+    module.exports = factory();
+  }
+  // 检测是不是 AMD 规范
+  else if (typeof define === "function" && define.amd) {
+    define(factory);
+  }
+  // 使用浏览器环境
+  else {
+    window.eventUtil = factory();
+  }
+})(this, function () {
+  //module ...
+});
+```
+
+### 5.ES6 模块
+
+ES6 模块是 ES6 的模块系统，它使用 import 和 export 来导入和导出模块。
+
+#### 【1】默认导出
+
+```ts
+// 导出模块
+export default {
+  name: "oyy",
+  age: 18
+};
+
+// 导入模块
+import module from "./module";
+console.log(module);
+```
+
+#### 【2】具名导出
+
+```ts
+// 导出模块
+export const name = "oyy";
+export const age = 18;
+
+// 导入模块
+import { name, age } from "./module";
+console.log(name, age);
+```
+
+#### 【3】混合导出
+
+```ts
+// 导出模块
+export default {
+  name: "oyy",
+  age: 18
+};
+
+export const name = "oyy";
+export const age = 18;
+
+// 导入模块
+import module, { name, age } from "./module";
+console.log(module, name, age);
+```
+
+#### 【4】重命名
+
+```ts
+// 导出模块
+export const name = "oyy";
+export const age = 18;
+
+// 导入模块
+import { name as name1, age as age1 } from "./module";
+console.log(name1, age1);
+```
+
+#### 【5】全部导入
+
+```ts
+// 导出模块
+export default {
+  name: "oyy",
+  age: 18
+};
+
+export const name = "oyy";
+export const age = 18;
+export const fn = () => {
+  console.log("fn");
+};
+
+// 导入模块
+import * as module from "./module";
+console.log(module);
+```
+
+#### 【6】动态导入
+
+```ts
+// 导出模块
+export const name = "oyy";
+export const age = 18;
+
+// 导入模块
+const module = await import("./module");
+console.log(module);
+
+import("./module").then(module => {
+  console.log(module);
+});
+```
+
+## 十五、声明文件(axios.d.ts)
+
+### 1.什么是声明文件
+
+声明文件是 TypeScript 提供的一种机制，用于描述 JavaScript 库的类型信息。它可以让 TypeScript 编译器理解库的类型，从而在编译时提供更好的类型检查和代码提示。 当使用第三方库时，我们需要为该库提供类型信息，这就是声明文件。这样才能获得对应的代码补全，接口提示等。
+
+### 2.声明文件的语法
+
+```ts
+declare module "module" {
+  export function name(params: type): returnType;
+}
+```
+
+### 3.案例手写声明文件
+
+```ts
+// index.ts
+import express from "express";
+
+const app = express();
+
+const router = express.Router();
+
+app.use("/api", router);
+
+router.get("/list", (req, res) => {
+  res.json({
+    code: 200
+  });
+});
+
+app.listen(9001, () => {
+  console.log(9001);
+});
+```
+
+```ts
+// express.d.ts
+declare module "express" {
+  interface Router {
+    get(path: string, cb: (req: any, res: any) => void): void;
+  }
+  interface App {
+    use(path: string, router: any): void;
+    listen(port: number, cb?: () => void): void;
+  }
+  interface Express {
+    (): App;
+    Router(): Router;
+  }
+  const express: Express;
+  export default express;
+}
+```
+
+## 十六、对象和类的合并
+
+### 1.对象的合并
+
+#### 【1】扩展运算符 浅拷贝
+
+它是一个浅拷贝，如果对象的属性是对象，那么合并后的对象的属性是引用类型，修改合并后的对象的属性，会影响到原对象的属性。
+
+```ts
+interface A {
+  name: string;
+}
+
+interface B {
+  age: number;
+}
+
+let a: A = {
+  name: "oyy"
+};
+
+let b: B = {
+  age: 18
+};
+
+let c = { ...a, ...b };
+console.log(c); // { name: 'oyy', age: 18 }
+```
+
+#### 【2】Object.assign 浅拷贝
+
+```ts
+interface A {
+  name: string;
+}
+
+interface B {
+  age: number;
+}
+
+let a: A = {
+  name: "oyy"
+};
+
+let b: B = {
+  age: 18
+};
+
+let c = Object.assign({}, a, b);
+console.log(c); // { name: 'oyy', age: 18 }
+```
+
+#### 【3】structuredClone 深拷贝
+
+全局方法，该方法还支持把原始值中的可转移对象转移到新对象，而不是把属性引用拷贝过去，可转移对象与原始对象分离并附加到新对象，它们不可以在原始对象中访问被访问到。
+需要在 node 高版本 18 以上使用，以及谷歌浏览器 90 多以上使用，可以直接调用这个方法
+
+```ts
+let a = {
+  name: "oyy"
+};
+
+let c = structuredClone(a);
+console.log(c); // { name: 'oyy' }
+```
+
+### 2.类的合并
+
+```ts
+class Logger {
+  log(msg: string) {
+    console.log(msg);
+  }
+}
+
+class Html {
+  render() {
+    console.log("render");
+  }
+}
+
+class App {
+  run() {
+    console.log("run");
+  }
+}
+
+type Constructor<T> = new (...args: any[]) => T;
+
+function pluginMixins<T extends Constructor<App>>(Base: T) {
+  return class extends Base {
+    private Logger = new Logger();
+    private Html = new Html();
+
+    constructor(...args: any[]) {
+      super(...args);
+      this.Logger = new Logger();
+      this.Html = new Html();
+    }
+
+    run() {
+      this.Logger.log("oyy");
+    }
+
+    render() {
+      this.Logger.log("oyy");
+      this.Html.render();
+    }
+  };
+}
+
+const mixins = pluginMixins(App);
+
+const app = new mixins();
+app.run();
+app.render();
+```
+
+## 十七、装饰器
+
+装饰器是一种特殊类型的声明，它能够被附加到类声明、方法、属性或参数上，可以修改类的行为。
+
+### 1.装饰器工厂

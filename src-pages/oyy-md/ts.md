@@ -1587,3 +1587,439 @@ let obj: A = {
   red: Types.yyds
 };
 ```
+
+## 十、Symbol 类型
+
+自 ECMAScript 2015 起，symbol 成为了一种新的原生类型，就像 number 和 string 一样。
+symbol 类型的值是通过 Symbol 构造函数创建的。
+
+### 1. 可以传递参做为唯一标识 只支持 string 和 number 类型的参数
+
+```ts
+let sym1 = Symbol();
+let sym2 = Symbol("key"); // 可选的字符串key
+```
+
+### 2. Symbol 的值是唯一的
+
+```ts
+const s1 = Symbol();
+const s2 = Symbol();
+// s1 === s2 => false
+```
+
+#### 【1】如何使两个 Symbol 相等
+
+Symbol 的 for 方法，会在全局搜索，看全局有没有注册过这个 key，如果有直接拿来用，如果没有就会去创建一个新的
+
+```ts
+let a = Symbol.for("oyy");
+let b = Symbol.for("oyy");
+// s1 === s2 => true
+```
+
+### 3.用作对象属性的键
+
+```ts
+let sym = Symbol();
+
+let obj = {
+  [sym]: "value"
+};
+
+console.log(obj[sym]); // "value"
+```
+
+### 4.使用 symbol 定义的属性，是不能通过如下方式遍历拿到的
+
+```ts
+const symbol1 = Symbol("666");
+const symbol2 = Symbol("777");
+const obj1 = {
+  [symbol1]: "小满",
+  [symbol2]: "二蛋",
+  age: 19,
+  sex: "女"
+};
+
+// 1 for in 遍历
+for (const key in obj1) {
+  // 注意在console看key,是不是没有遍历到symbol1
+  console.log(key);
+}
+
+// 2 Object.keys 遍历
+Object.keys(obj1);
+console.log(Object.keys(obj1));
+
+// 3 getOwnPropertyNames
+console.log(Object.getOwnPropertyNames(obj1));
+
+// 4 JSON.stringfy
+console.log(JSON.stringify(obj1));
+```
+
+如何拿到
+
+```ts
+// 1 拿到具体的symbol 属性,对象中有几个就会拿到几个
+Object.getOwnPropertySymbols(obj1);
+console.log(Object.getOwnPropertySymbols(obj1));
+// 2 es6 的 Reflect 拿到对象的所有属性
+Reflect.ownKeys(obj1);
+console.log(Reflect.ownKeys(obj1));
+```
+
+### 5.生成器
+
+```ts
+function* gen() {
+  yield "你好"; // yield后面可以跟同步或者异步
+  yield Promise.resolve("好的");
+  yield "很好";
+  yield "非常好";
+}
+
+const man = gen();
+console.log(man.next()); // {value: '你好', done: false}
+console.log(man.next()); // {value: Promise('好的'), done: false}
+console.log(man.next()); // {value: '很好', done: false}
+console.log(man.next()); // {value: '非常好', done: false}
+console.log(man.next()); // {value: undefined, done: true} done为true说明没有东西可以迭代了
+```
+
+### 6.迭代器 Symbol.iterator
+
+```ts
+let arr = [1, 2, 3];
+arr[Symbol.iterator]().next(); // {value: 1, done: false}
+arr[Symbol.iterator]().next().value; // 1
+```
+
+#### 【1】手写一个简单的迭代器
+
+```ts
+const iterator = (value: any) => {
+  let It: any = value[Symbol.iterator]();
+  let next: any = { done: false };
+
+  while (!next.done) {
+    next = It.next();
+    if (!next.done) {
+      console.log(next.value);
+    }
+  }
+};
+```
+
+#### 【2】迭代器的语法糖 for of
+
+但是 for of 不能用于对象，因为对象身上没有 iterator，上述简单迭代器可以说是 for of 的底层原理
+
+#### 【3】解构
+
+解构和扩展运算符的底层原理 也是去调用 iterator
+
+#### 【4】如何让对象支持 for of
+
+```ts
+let obj = {
+  max: 5,
+  current: 0,
+  [Symbol.iterator]() {
+    return {
+      max: this.max,
+      current: this.current,
+      next() {
+        if (this.max === this.current) {
+          return {
+            value: undefined,
+            done: true
+          };
+        } else {
+          return {
+            value: this.current++,
+            done: false
+          };
+        }
+      }
+    };
+  }
+};
+
+for (let val of obj) {
+  console.log(val); // 0 1 2 3 4
+}
+
+let list = [...obj];
+console.log(list); // [0,1,2,3,4]
+```
+
+## 十一、泛型
+
+```ts
+function Add<T>(a: T, b: T): Array<T> {
+  return [a, b];
+}
+
+Add<number>(1, 2);
+Add<string>("1", "2");
+```
+
+我们也可以使用不同的泛型参数名，只要在数量上和使用方式上能对应上就可以。
+
+```ts
+function Sub<T, U>(a: T, b: U): Array<T | U> {
+  const params: Array<T | U> = [a, b];
+  return params;
+}
+
+Sub<Boolean, number>(false, 1);
+```
+
+```ts
+const axios = {
+  get<T>(url: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+      let xhr: XMLHttpRequest = new XMLHttpRequest();
+      xhr.open("GET", url);
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4 && xhr.status == 200) {
+          resolve(JSON.parse(xhr.responeseText));
+        }
+      };
+      xhr.send(null);
+    });
+  }
+};
+
+interface Data {
+  message: string;
+  code: number;
+}
+
+axios.get<Data>("./data.json").then(res => {
+  console.log(res.code);
+});
+```
+
+### 1.定义泛型接口
+
+```ts
+interface MyInter<T> {
+  (arg: T): T;
+}
+
+function fn<T>(arg: T): T {
+  return arg;
+}
+
+let result: MyInter<number> = fn;
+
+result(123);
+```
+
+### 2.泛型约束 extends 进行约束
+
+```ts
+function add<T extends number>(a: T, b: T) {
+  return a + b;
+}
+
+add(1, 2);
+```
+
+```ts
+interface Len {
+  length: number;
+}
+
+function fn<T extends Len>(arg: T)(
+   arg.length
+);
+
+fn('123')
+fn([1,2,3,4])
+```
+
+```ts
+let obj = {
+  name: "oyy",
+  sex: "man"
+};
+
+// 先使用typeof 获取类型，再使用keyof 将对象身上的key推断成联合类型了
+type Key = keyof typeof obj; // type Key = "name" | "sex"
+
+function obFn<T extends object, K extends keyof T>(obj: T, key: K) {
+  return obj[key];
+}
+
+obFn(obj, "name");
+```
+
+```ts
+interface Data {
+  name: string;
+  age: number;
+  sex: string;
+}
+
+type Options<T extends object> = {
+  [Key in keyof T]?: T[Key];
+};
+
+type B = Options<Data>;
+```
+
+## 十二、tsconfig.json
+
+```ts
+"compilerOptions": {
+  "incremental": true, // TS编译器在第一次编译之后会生成一个存储编译信息的文件，第二次编译会在第一次的基础上进行增量编译，可以提高编译的速度
+  "tsBuildInfoFile": "./buildFile", // 增量编译文件的存储位置
+  "diagnostics": true, // 打印诊断信息
+  "target": "ES5", // 目标语言的版本
+  "module": "CommonJS", // 生成代码的模板标准
+  "outFile": "./app.js", // 将多个相互依赖的文件生成一个文件，可以用在AMD模块中，即开启时应设置"module": "AMD",
+  "lib": ["DOM", "ES2015", "ScriptHost", "ES2019.Array"], // TS需要引用的库，即声明文件，es5 默认引用dom、es5、scripthost,如需要使用es的高级版本特性，通常都需要配置，如es8的数组新特性需要引入"ES2019.Array",
+  "allowJS": true, // 允许编译器编译JS，JSX文件
+  "checkJs": true, // 允许在JS文件中报错，通常与allowJS一起使用
+  "outDir": "./dist", // 指定输出目录
+  "rootDir": "./", // 指定输出文件目录(用于输出)，用于控制输出目录结构
+  "declaration": true, // 生成声明文件，开启后会自动生成声明文件
+  "declarationDir": "./file", // 指定生成声明文件存放目录
+  "emitDeclarationOnly": true, // 只生成声明文件，而不会生成js文件
+  "sourceMap": true, // 生成目标文件的sourceMap文件
+  "inlineSourceMap": true, // 生成目标文件的inline SourceMap，inline SourceMap会包含在生成的js文件中
+  "declarationMap": true, // 为声明文件生成sourceMap
+  "typeRoots": [], // 声明文件目录，默认时node_modules/@types
+  "types": [], // 加载的声明文件包
+  "removeComments":true, // 删除注释
+  "noEmit": true, // 不输出文件,即编译后不会生成任何js文件
+  "noEmitOnError": true, // 发送错误时不输出任何文件
+  "noEmitHelpers": true, // 不生成helper函数，减小体积，需要额外安装，常配合importHelpers一起使用
+  "importHelpers": true, // 通过tslib引入helper函数，文件必须是模块
+  "downlevelIteration": true, // 降级遍历器实现，如果目标源是es3/5，那么遍历器会有降级的实现
+  "strict": true, // 开启所有严格的类型检查
+  "alwaysStrict": true, // 在代码中注入'use strict'
+  "noImplicitAny": true, // 不允许隐式的any类型
+  "strictNullChecks": true, // 不允许把null、undefined赋值给其他类型的变量
+  "strictFunctionTypes": true, // 不允许函数参数双向协变
+  "strictPropertyInitialization": true, // 类的实例属性必须初始化
+  "strictBindCallApply": true, // 严格的bind/call/apply检查
+  "noImplicitThis": true, // 不允许this有隐式的any类型
+  "noUnusedLocals": true, // 检查只声明、未使用的局部变量(只提示不报错)
+  "noUnusedParameters": true, // 检查未使用的函数参数(只提示不报错)
+  "noFallthroughCasesInSwitch": true, // 防止switch语句贯穿(即如果没有break语句后面不会执行)
+  "noImplicitReturns": true, //每个分支都会有返回值
+  "esModuleInterop": true, // 允许export=导出，由import from 导入
+  "allowUmdGlobalAccess": true, // 允许在模块中全局变量的方式访问umd模块
+  "moduleResolution": "node", // 模块解析策略，ts默认用node的解析策略，即相对的方式导入
+  "baseUrl": "./", // 解析非相对模块的基地址，默认是当前目录
+  "paths": { // 路径映射，相对于baseUrl
+    // 如使用jq时不想使用默认版本，而需要手动指定版本，可进行如下配置
+    "jquery": ["node_modules/jquery/dist/jquery.min.js"]
+  },
+  "rootDirs": ["src","out"], // 将多个目录放在一个虚拟目录下，用于运行时，即编译后引入文件的位置可能发生变化，这也设置可以虚拟src和out在同一个目录下，不用再去改变路径也不会报错
+  "listEmittedFiles": true, // 打印输出文件
+  "listFiles": true// 打印编译的文件(包括引用的声明文件)
+}
+
+// 指定一个匹配列表（属于自动指定该路径下的所有ts相关文件）
+"include": [
+   "src/**/*"
+],
+// 指定一个排除列表（include的反向操作）
+ "exclude": [
+   "demo.ts"
+],
+// 指定哪些文件使用该配置（属于手动一个个指定文件）
+ "files": [
+   "demo.ts"
+]
+```
+
+## 十三、namespace 命名空间
+
+命名空间中通过 export 将想要暴露的部分导出，如果不用 export 导出是无法读取其值的，命名空间可以进行合并
+
+```ts
+namespace a {
+  export const Time: number = 1000;
+  export const fn = <T>(arg: T): T => {
+    return arg;
+  };
+  fn(Time);
+}
+
+namespace b {
+  export const Time: number = 1000;
+  export const fn = <T>(arg: T): T => {
+    return arg;
+  };
+  fn(Time);
+}
+
+a.Time;
+b.Time;
+```
+
+### 1.嵌套命名空间
+
+```ts
+namespace a {
+  export namespace b {
+    export class Vue {
+      parameters: string;
+      constructor(parameters: string) {
+        this.parameters = parameters;
+      }
+    }
+  }
+}
+
+let v = a.b.Vue;
+
+new v("1");
+```
+
+### 2.抽离命名空间
+
+#### 【1】a.ts
+
+```ts
+export namespace V {
+  export const a = 1;
+}
+```
+
+#### 【2】b.ts
+
+```ts
+import { V } from "../observer/index";
+
+console.log(V);
+```
+
+### 3.应用案例
+
+比如做跨端项目 h5 ios android 小程序等
+
+```ts
+namespace ios {
+  export const pushNotification = (msg: string, type: number) => {
+    // ......
+  };
+}
+
+namespace android {
+  export const pushNotification = (msg: string) => {
+    // ......
+  };
+
+  export const callPhone = (phone: number) => {
+    // ......
+  };
+}
+```

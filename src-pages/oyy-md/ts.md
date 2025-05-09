@@ -930,20 +930,14 @@ const cats: Record<CatName, CatInfo> = {
   mordred: { age: 16, breed: "British Shorthair" }
 };
 console.log(cats.boris);
-function mapObject<K extends string | number, T, U>(
-  obj: Record<K, T>,
-  f: (x: T) => U
-): Record<K, U> {
+function mapObject<K extends string | number, T, U>(obj: Record<K, T>, f: (x: T) => U): Record<K, U> {
   let ret = <Record<K, U>>{};
   Object.keys(obj).map(key => {
     ret[key] = f(obj[key]);
   });
   return ret;
 }
-function mapObject<K extends string | number, T, U>(
-  obj: Record<K, T>,
-  f: (x: T) => U
-): Record<K, U> {
+function mapObject<K extends string | number, T, U>(obj: Record<K, T>, f: (x: T) => U): Record<K, U> {
   let res: any = {};
   for (let key in obj) {
     res[key] = f(obj[key]);
@@ -1032,11 +1026,7 @@ type MapToPromise<T> = {
 };
 type Tuple = [number, string, boolean];
 type PromiseTuple = MapToPromise<Tuple>;
-let tuple1: PromiseTuple = [
-  new Promise((resolve, reject) => resolve(1)),
-  new Promise((resolve, reject) => resolve("a")),
-  new Promise((resolve, reject) => resolve(true))
-];
+let tuple1: PromiseTuple = [new Promise((resolve, reject) => resolve(1)), new Promise((resolve, reject) => resolve("a")), new Promise((resolve, reject) => resolve(true))];
 ```
 
 ### 9.unknown
@@ -2456,11 +2446,7 @@ http.post();
 
 ```ts
 const Get = (url: string) => {
-  const decorator: MethodDecorator = (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-  ) => {
+  const decorator: MethodDecorator = (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
     // target 读取的是getList的原型对象
 
     axios.get(url).then(res => {
@@ -2486,11 +2472,7 @@ class Http {
 import "reflect-metadata";
 
 const Get = (url: string) => {
-  const decorator: MethodDecorator = (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-  ) => {
+  const decorator: MethodDecorator = (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
     // target 读取的是getList的原型对象
 
     // 获取反射元数据
@@ -2504,11 +2486,7 @@ const Get = (url: string) => {
 };
 
 const Result = () => {
-  const decorator: ParameterDecorator = (
-    target: any,
-    propertyKey: string,
-    parameterIndex: number
-  ) => {
+  const decorator: ParameterDecorator = (target: any, propertyKey: string, parameterIndex: number) => {
     // target 是getList的原型对象  propertyKey 是getList的方法名 parameterIndex 是getList的参数索引
     console.log(target, propertyKey, parameterIndex); // {} getList 0
 
@@ -3051,4 +3029,522 @@ console.log(weakMap.has(leakyObject)); // false
 /*在上述示例中，我们创建了一个LeakyClass类，它有一个data属性，用于存储数据。我们将leakyObject添加到weakMap中，
 并将其作为键。然后，我们断开对leakyObject的引用，此时leakyObject成为垃圾回收的候选对象。
 最后，我们检查weakMap中是否仍然存在对应键值对。由于leakyObject已经不再被引用，它将被垃圾回收，因此weakMap.has(leakyObject)返回false。*/
+```
+
+## 二十一、Proxy & Reflect
+
+### 1.Proxy
+
+Proxy 是 ES6 引入的一种新的对象，它允许我们拦截和修改对象的操作。
+
+#### 【1】Proxy 的语法
+
+target 目标对象，支持对象、函数、数组、Set、Map 等
+
+```ts
+let person = {
+  name: "oyy",
+  age: 18
+};
+let proxy = new Proxy(person, {
+  // 取值
+  get(target, prop) {
+    return target[prop];
+  },
+  // 设置值
+  set(target, key, value, receiver) {
+    // target 目标对象  person
+    // key 属性名 name age
+    // value 属性值
+    // receiver 代理对象 person
+    target[key] = value;
+    return true;
+  },
+  // 拦截函数调用
+  apply(target, ctx, args) {
+    // target 目标对象  person
+    // ctx 上下文对象  person
+    // args 参数数组 [1, 2, 3]
+    return target(...args);
+  },
+  // 拦截 in 操作符
+  has(target, key) {
+    return key in target;
+  },
+  // 拦截 for...in 操作符
+  ownKeys(target) {
+    return Object.keys(target);
+  },
+  // 拦截 new 操作符
+  construct(target, args) {
+    return new target(...args);
+  },
+  // 拦截 delete 操作符
+  deleteProperty(target, key) {
+    return delete target[key];
+  }
+});
+```
+
+#### 【2】Proxy 的拦截操作
+
+支持 13 种拦截操作
+
+- get(target, prop, receiver)
+- set(target, prop, value, receiver)
+- apply(target, ctx, args)
+- has(target, key)
+- ownKeys(target)
+- construct(target, args)
+- deleteProperty(target, key)
+- ownKeys(target)
+- getOwnPropertyDescriptor(target, key)
+- defineProperty(target, key, descriptor)
+- getPrototypeOf(target)
+- setPrototypeOf(target, proto)
+- isExtensible(target)
+- preventExtensions(target)
+
+#### 【3】Proxy 的局限性
+
+- 无法拦截对象的静态方法
+- 无法拦截对象的继承方法
+- 无法拦截对象的属性描述符
+- 无法拦截对象的继承属性
+- 无法拦截对象的继承方法
+
+#### 【4】示例
+
+```ts
+let person = {
+  name: "oyy",
+  age: 18
+};
+
+let proxy = new Proxy(person, {
+  get(target, key, receiver) {
+    if (target.age <= 18) {
+      // 返回Reflect.get的值 相当于target[key] 只不过它会帮我们去操作这个对象，并且第三个参数是代理对象，可以保证上下文的正确
+      return Reflect.get(target, key, receiver);
+    } else {
+      return "成年了";
+    }
+  }
+});
+
+proxy.age;
+```
+
+### 2.Reflect
+
+Reflect 是 ES6 引入的一种新的对象，它提供了一系列静态方法，用于操作对象。参数和 Proxy 的拦截操作一样
+
+#### 【1】Reflect 的语法
+
+```ts
+let person = {
+  name: "oyy",
+  age: 18
+};
+
+// 普通对象取值
+console.log(person.name); // oyy
+
+// 使用Reflect取值
+console.log(Reflect.get(person, "name", person)); // oyy
+
+// 使用Reflect设置值  它设置成功会返回true
+Reflect.set(person, "name", "oyy1", person);
+console.log(person.name); // oyy1
+
+// 使用Reflect删除值  它删除成功会返回true
+Reflect.deleteProperty(person, "name", person);
+console.log(person.name); // undefined
+```
+
+#### 【2】Reflect 的静态方法
+
+- get(target, key, receiver)
+- set(target, key, value, receiver)
+- deleteProperty(target, key)
+- has(target, key)
+- ownKeys(target)
+- getOwnPropertyDescriptor(target, key)
+- defineProperty(target, key, descriptor)
+- getPrototypeOf(target)
+- setPrototypeOf(target, proto)
+- isExtensible(target)
+- preventExtensions(target)
+
+#### 【3】Reflect 的局限性
+
+- 无法拦截对象的静态方法
+- 无法拦截对象的继承方法
+- 无法拦截对象的属性描述符
+- 无法拦截对象的继承属性
+- 无法拦截对象的继承方法
+
+### 3.编写观察者模式
+
+```ts
+// 观察者列表
+const list: Set<Function> = new Set();
+
+// 添加观察者
+const add = (cb: Function) => {
+  if (!list.has(cb)) {
+    list.add(cb);
+  }
+};
+
+// 删除观察者
+const remove = (fn: Function) => {
+  list.delete(fn);
+};
+
+// 观察者
+const observer = <T extends object>(target: T) => {
+  const proxy = new Proxy(target, {
+    set(target, key, value, receiver) {
+      const result = Reflect.set(target, key, value, receiver);
+      // 数据发生变化时,通知观察者
+      list.forEach(fn => fn(key, value));
+      return result;
+    }
+  });
+
+  return proxy;
+};
+
+// 添加观察者
+add((key, value) => {
+  console.log(`${key} 发生了变化,值为 ${value}`);
+});
+
+// 删除观察者
+remove((key, value) => {});
+
+// 观察者
+const observer = observer({
+  name: "oyy",
+  age: 18
+});
+
+observer.name = "oyy1";
+```
+
+## 二十二、类型守卫(类型收缩，类型收窄)
+
+类型守卫是一种用于缩小类型范围的机制，它允许我们在运行时检查变量的类型，并根据类型执行不同的操作。
+
+### 1.typeof 类型守卫
+
+它是有缺陷的，比如数组，对象，函数，Null 等都会返回 object
+
+```ts
+const isString = (str: any) => typeof str === "string";
+
+const isNumber = (num: any) => typeof num === "number";
+
+const isBoolean = (bool: any) => typeof bool === "boolean";
+```
+
+### 2.instanceof 类型守卫
+
+```ts
+const isArray = (arr: any) => arr instanceof Array;
+
+const isObject = (obj: any) => obj instanceof Object;
+
+const isFunction = (func: any) => func instanceof Function;
+
+const isNull = (null: any) => null instanceof Null;
+```
+
+### 3.类型谓词 | 自定义守卫
+
+自定义守卫，它只能接手布尔值
+
+#### 语法规则
+
+参数 is 类型
+
+这个函数如果返回 true，那么参数就是该类型
+
+```ts
+// 实现一个函数，该函数可以传入任何类型，但是如果是 object 就检查里面的属性，如果里面的属性是 number 就取两位，如果是 string 就去除左右空格，如果是函数就执行
+
+// const isObject = (obj: any): obj is object => {
+//   return typeof obj === "object" && obj !== null;
+// };
+
+// const isObj = (arg: any) => Object.prototype.toString.call(arg) === "[object Object]";
+
+const isObj = (arg: any): arg is object => ({}.toString.call(arg) === "[object Object]"); // ({}) 相当于是 Object.prototype
+
+const isNumber = (arg: any): arg is number => Object.prototype.toString.call(arg) === "[object Number]";
+
+const isString = (arg: any): arg is string => Object.prototype.toString.call(arg) === "[object String]";
+
+const isFunction = (arg: any): arg is Function => Object.prototype.toString.call(arg) === "[object Function]";
+
+const checkFn = (data: any) => {
+  if (isObj(data)) {
+    let val;
+    // 遍历属性不能用 for in 要用 Object.keys,因为它会遍历原型上的属性
+    Object.keys(data).forEach(key => {
+      if (isNumber(data[key])) {
+        val = data[key].toFixed(2);
+      } else if (isString(data[key])) {
+        val = data[key].trim();
+      } else if (isFunction(data[key])) {
+        val = data[key]();
+      }
+    });
+  }
+};
+
+checkFn({
+  name: " oyy  ",
+  age: 18.265,
+  fn: function () {
+    console.log("fn");
+  }
+});
+```
+
+## 二十三、类型兼容
+
+所谓的类型兼容性，就是用于确定一个类型是否能赋值给其他的类型。typeScript 中的类型兼容性是基于结构类型的（也就是形状），如果 A 要兼容 B 那么 A 至少具有 B 相同的属性。
+
+### 1.协变 也可以叫鸭子类型
+
+什么是鸭子类型？
+
+一只鸟 走路像鸭子 ，游泳也像，做什么都像，那么这只鸟就可以成为鸭子类型。
+
+```ts
+interface A {
+  name: string;
+  age: number;
+}
+
+interface B {
+  name: string;
+  age: number;
+  sex: string;
+}
+
+let a: A = {
+  name: "老墨我想吃鱼了",
+  age: 33
+};
+
+let b: B = {
+  name: "老墨我不想吃鱼",
+  age: 33,
+  sex: "女"
+};
+
+a = b;
+```
+
+A B 两个类型完全不同但是竟然可以赋值并无报错 B 类型充当 A 类型的子类型，当子类型里面的属性满足 A 类型就可以进行赋值，也就是说不能少可以多，这就是协变。
+
+### 2.逆变
+
+逆变一般发生于函数的参数上面
+
+```ts
+interface A {
+  name: string;
+  age: number;
+}
+
+interface B {
+  name: string;
+  age: number;
+  sex: string;
+}
+
+let a: A = {
+  name: "老墨我想吃鱼了",
+  age: 33
+};
+
+let b: B = {
+  name: "老墨我不想吃鱼",
+  age: 33,
+  sex: "女"
+};
+
+a = b;
+
+let fna = (params: A) => {};
+let fnb = (params: B) => {};
+
+fna = fnb; //错误
+
+fnb = fna; //正确
+```
+
+这里比较绕，注意看 fna 赋值 给 fnb 其实最后执行的还是 fna 而 fnb 的类型能够完全覆盖 fna 所以这一定是安全的，相反 fna 的类型不能完全覆盖 fnb 少一个 sex 所以是不安全的。
+
+### 3.双向协变
+
+tsconfig strictFunctionTypes 设置为 false 支持双向协变 fna fnb 随便可以来回赋值
+
+## 二十四、泛型工具
+
+### 1.Partial
+
+Partial 用于将类型中的属性变为可选
+
+```ts
+interface User {
+  name: string;
+  age: number;
+}
+
+type test = Partial<User>;
+
+//转换完成之后的结果
+
+type test = {
+  name?: string | undefined;
+  age?: number | undefined;
+};
+
+//原理 通过keyof 获取到User的属性，然后遍历这个属性，然后给这个属性添加一个可选的问号
+type CoustomPratial<T> = {
+  [key in keyof T]?: T[key];
+};
+```
+
+### 2.Required
+
+Required 用于将类型中的属性变为必选
+
+```ts
+interface User {
+  name?: string;
+  age?: number;
+}
+//原理 通过keyof 获取到User的属性，然后遍历这个属性，然后去掉问号 -?
+type CustomRequired<T> = {
+  [key in keyof T]-?: T[key];
+};
+
+type test = Required<User>;
+type test2 = CustomRequired<User>;
+
+//结果
+interface User {
+  name: string;
+  age: number;
+}
+```
+
+### 3.Pick
+
+Pick 用于从类型中选择一些属性
+
+```ts
+interface User {
+  name?: string;
+  age?: number;
+}
+
+//原理 keyof T => name | age 获取到T的属性，是一个联合类型，然后遍历这个属性，然后返回一个新类型
+// 然后通过extends 约束K 必须是keyof T的子集
+// 然后通过in 遍历K 然后返回一个新类型
+type CoustomPick<T, K extends keyof T> = {
+  [key in K]: T[key];
+};
+
+type test = Pick<User, "age">;
+
+//结果
+type test = {
+  age?: number | undefined;
+};
+```
+
+### 4.Exclude
+
+Exclude 用于从类型中排除一些属性
+
+```ts
+//原理 为什么要搞never？ 因为never在联合类型中会被忽略
+type CustomExclude<T, K> = T extends K ? never : T;
+
+type test = Exclude<"a" | "b" | "c", "a" | "b">;
+
+//结果
+type test = "c";
+```
+
+### 5.Omit
+
+Omit 用于从类型中排除一些属性
+
+```ts
+interface User {
+  address?: string;
+  name?: string;
+  age?: number;
+}
+
+//原理
+type CoustomOmit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+
+type test = Omit<User, "age">;
+
+//结果
+type test = {
+  address?: string | undefined;
+  name?: string | undefined;
+};
+```
+
+### 6.Record
+
+Record 用于将类型中的属性变为必选，用来约束对象的 key 和 value
+
+```ts
+//record 约束对象的key和value
+
+type Key = "c" | "x" | "k";
+
+type Value = "唱" | "跳" | "rap" | "篮球";
+
+let obj: Record<Key, Value> = {
+  "c": "唱",
+  "x": "跳",
+  "k": "rap"
+};
+
+// 原理
+type CustomRecord<K extends keyof any, T> = {
+  [P in K]: T;
+};
+
+// 支持嵌套约束
+let obj: CustomRecord<Key, Record<Key, Value>> = {
+  "c": {
+    "c": "唱",
+    "x": "跳",
+    "k": "rap"
+  },
+  "x": {
+    "c": "唱",
+    "x": "跳",
+    "k": "rap"
+  },
+  "k": {
+    "c": "唱",
+    "x": "跳",
+    "k": "rap"
+  }
+};
 ```

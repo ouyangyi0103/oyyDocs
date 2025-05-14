@@ -33,7 +33,27 @@ export default defineConfig({
       },
       {
         text: "oyy",
-        items: [{ text: "一、TS", link: "src-pages/oyy-md/ts" }]
+        items: [
+          {
+            text: "一、TypeScript",
+            items: [
+              { text: "1、基础类型", link: "src-pages/oyy-md/typescript/ts-base" },
+              { text: "2、高级类型", link: "src-pages/oyy-md/typescript/ts-hightype" },
+              { text: "3、类-Symbol", link: "src-pages/oyy-md/typescript/ts-class-symbol" },
+              { text: "3、泛型", link: "src-pages/oyy-md/typescript/ts-generic" },
+              { text: "4、模块化解析", link: "src-pages/oyy-md/typescript/ts-module" },
+              { text: "5、装饰器", link: "src-pages/oyy-md/typescript/ts-decorator" },
+              { text: "6、发布订阅模式-set-map", link: "src-pages/oyy-md/typescript/ts-pubsub" },
+              { text: "7、Proxy & Reflect", link: "src-pages/oyy-md/typescript/ts-proxy-reflect" },
+              { text: "8、类型守卫-类型兼容", link: "src-pages/oyy-md/typescript/ts-type-guard" },
+              { text: "9、infer关键字", link: "src-pages/oyy-md/typescript/ts-infer" }
+            ]
+          },
+          {
+            text: "二、React",
+            items: []
+          }
+        ]
       }
     ],
     // 右上角图标

@@ -54,9 +54,9 @@ export default defineConfig({
             items: [
               { text: "1、JSX", link: "src-pages/oyy-md/react/jsx" },
               { text: "2、使用工具", link: "src-pages/oyy-md/react/utils" },
-              { text: "React组件", link: "src-pages/oyy-md/react/react-component" },
-              { text: "React状态管理", link: "src-pages/oyy-md/react/react-state-management" },
-              { text: "React路由", link: "src-pages/oyy-md/react/react-router" }
+              { text: "3、原理", link: "src-pages/oyy-md/react/principle" },
+              { text: "4、组件", link: "src-pages/oyy-md/react/components" },
+              { text: "5、CSS方案", link: "src-pages/oyy-md/react/css" }
             ]
           }
         ]

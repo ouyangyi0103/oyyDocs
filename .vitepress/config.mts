@@ -23,6 +23,7 @@ export default defineConfig({
     sidebar: [
       {
         text: "xm学堂",
+        collapsed: true,
         items: [
           { text: "一、jq源码", link: "src-pages/xm-md/jq" },
           { text: "二、项目埋点与监控SDK设计", link: "src-pages/xm-md/track" },
@@ -33,6 +34,7 @@ export default defineConfig({
       },
       {
         text: "oyy",
+        collapsed: true,
         items: [
           {
             text: "一、TypeScript",
@@ -55,7 +57,7 @@ export default defineConfig({
               { text: "1、JSX", link: "src-pages/oyy-md/react/jsx" },
               { text: "2、使用工具", link: "src-pages/oyy-md/react/utils" },
               { text: "3、原理", link: "src-pages/oyy-md/react/principle" },
-              { text: "4、组件", link: "src-pages/oyy-md/react/components" },
+              { text: "4、Hooks", link: "src-pages/oyy-md/react/hooks" },
               { text: "5、CSS方案", link: "src-pages/oyy-md/react/css" }
             ]
           }

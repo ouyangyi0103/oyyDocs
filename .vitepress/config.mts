@@ -58,7 +58,8 @@ export default defineConfig({
               { text: "2、使用工具", link: "src-pages/oyy-md/react/utils" },
               { text: "3、原理", link: "src-pages/oyy-md/react/principle" },
               { text: "4、Hooks", link: "src-pages/oyy-md/react/hooks" },
-              { text: "5、CSS方案", link: "src-pages/oyy-md/react/css" }
+              { text: "5、组件", link: "src-pages/oyy-md/react/components" },
+              { text: "6、CSS方案", link: "src-pages/oyy-md/react/css" }
             ]
           }
         ]

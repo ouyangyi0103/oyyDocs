@@ -1559,3 +1559,528 @@ function App() {
 
 export default App;
 ```
+
+### 3.useContext
+
+useContext 提供了一个无需为每层组件手动添加 props，就能在组件树间进行数据传递的方法。设计的目的就是解决组件树间数据传递的问题。
+
+#### 【1】使用方法
+
+```tsx
+const MyThemeContext = React.createContext({ theme: "light" }); // 创建一个上下文
+function App() {
+  return (
+    <MyThemeContext.Provider value={{ theme: "light" }}>
+      <MyComponent />
+    </MyThemeContext.Provider>
+  );
+}
+function MyComponent() {
+  const themeContext = useContext(MyThemeContext); // 使用上下文
+  return <div>{themeContext.theme}</div>;
+}
+```
+
+#### 【2】参数
+
+入参
+
+- context：是 createContext 创建出来的对象，他不保持信息，他是信息的载体。声明了可以从组件获取或者给组件提供信息。
+  返回值
+- 返回传递的 Context 的值，并且是只读的。如果 context 发生变化，React 会自动重新渲染读取 context 的组件
+
+#### 【3】基本用法
+
+##### react18 版本
+
+首先我们先通过 createContext 创建一个上下文，然后通过 createContext 创建的组件包裹组件，传递值。
+
+被包裹的组件，在任何一个层级都是可以获取上下文的值，那么如何使用呢？
+
+使用的方式就是通过 useContext 这个 hook，然后传入上下文，就可以获取到上下文的值。
+
+```tsx
+import React, { useContext, useState } from "react";
+
+// 定义上下文类型
+interface ThemeContextType {
+  theme: string;
+  setTheme: (theme: string) => void;
+}
+
+// 创建上下文
+const ThemeContext = React.createContext<ThemeContextType>({} as ThemeContextType);
+
+const Child = () => {
+  // 获取上下文
+  const themeContext = useContext(ThemeContext);
+  const styles = {
+    backgroundColor: themeContext.theme === "light" ? "white" : "black",
+    border: "1px solid red",
+    width: 100 + "px",
+    height: 100 + "px",
+    color: themeContext.theme === "light" ? "black" : "white"
+  };
+};
+
+const Parent = () => {
+  // 获取上下文
+  const themeContext = useContext(ThemeContext);
+
+  const styles = {
+    backgroundColor: themeContext.theme === "light" ? "white" : "black",
+    border: "1px solid red",
+    width: 100 + "px",
+    height: 100 + "px",
+    color: themeContext.theme === "light" ? "black" : "white"
+  };
+
+  return (
+    <div>
+      <div style={styles}>Parent</div>
+      <Child />
+    </div>
+  );
+};
+
+function App() {
+  const [theme, setTheme] = useState("light");
+  return (
+    <div>
+      <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>切换主题</button>
+      <ThemeContext.Provider value={{ theme, setTheme }}>
+        <Parent />
+      </ThemeContext.Provider>
+    </div>
+  );
+}
+
+export default App;
+```
+
+##### react19 版本
+
+```tsx
+import React, { useContext, useState } from 'react';
+const ThemeContext = React.createContext<ThemeContextType>({} as ThemeContextType);
+interface ThemeContextType {
+   theme: string;
+   setTheme: (theme: string) => void;
+}
+
+const Child = () => {
+   const themeContext = useContext(ThemeContext);
+   const styles = {
+      backgroundColor: themeContext.theme === 'light' ? 'white' : 'black',
+      border: '1px solid red',
+      width: 100 + 'px',
+      height: 100 + 'px',
+      color: themeContext.theme === 'light' ? 'black' : 'white'
+   }
+   return <div>
+      <div style={styles}>
+         child
+      </div>
+   </div>
+}
+
+const Parent = () => {
+   const themeContext = useContext(ThemeContext);
+   const styles = {
+      backgroundColor: themeContext.theme === 'light' ? 'white' : 'black',
+      border: '1px solid red',
+      width: 100 + 'px',
+      height: 100 + 'px',
+      color: themeContext.theme === 'light' ? 'black' : 'white'
+   }
+   return <div>
+      <div style={styles}>
+         Parent
+      </div>
+      <Child />
+   </div>
+}
+function App() {
+   const [theme, setTheme] = useState('light');
+   return (
+      <div>
+         <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>切换主题</button>
+          // 这里可以直接使用，不需要ThemeContext.Provider包裹
+         <ThemeContext value={{ theme, setTheme }}>
+            <Parent />
+         <ThemeContext>
+      </div >
+   );
+}
+
+export default App;
+```
+
+#### 【4】注意事项
+
+- 使用 ThemeContext 时，传递的 key 必须为 value
+
+```tsx
+// 🚩 不起作用：prop 应该是“value”
+<ThemeContext theme={theme}>
+   <Button />
+</ThemeContext>
+// ✅ 传递 value 作为 prop
+<ThemeContext value={theme}>
+   <Button />
+</ThemeContext>
+```
+
+- 可以使用多个 Context
+
+```tsx
+const ThemeContext = React.createContext({ theme: "light" });
+
+function App() {
+  return (
+    <ThemeContext value={{ theme: "light" }}>
+      {/* 里面的这个ThemeContext会覆盖了上面的值 */}
+      <ThemeContext value={{ theme: "dark" }}>
+        <Parent />
+      </ThemeContext>
+    </ThemeContext>
+  );
+}
+```
+
+## 四、状态派生
+
+### 1. useMemo
+
+<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useMemo</span> 是 React 提供的一个性能优化 Hook。它的主要功能是避免在每次渲染时执行复杂的计算和对象重建。通过记忆上一次的计算结果，仅当依赖项变化时才会重新计算，提高了性能，有点类似于 Vue 的<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">computed</span>。
+
+#### [1].使用方法
+
+```tsx
+import React, { useMemo, useState } from "react";
+const App = () => {
+  const [count, setCount] = useState(0);
+  const memoizedValue = useMemo(() => count, [count]);
+  return <div>{memoizedValue}</div>;
+};
+```
+
+#### [2].参数
+
+- 第一个参数：是一个函数，返回值是计算的值
+- 第二个参数：是一个数组，数组中的值是依赖项，当依赖项变化时，会重新计算<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">(执行时机跟 useEffect 类似)</span>
+- 返回值：返回需要缓存的值
+
+#### [3].案例
+
+:::tip
+
+- 我们来看下面这个例子，如果没有使用 useMemo 进行缓存，每次 search 发生变化， total 都会重新计算，因为我们的 total 跟 search 没有关系，所以这样就造成了没必要的计算，我们可以使用 useMemo 缓存去进行优化。
+- 当我们使用 useMemo 缓存后，只有 goods 发生变化时， total 才会重新计算, 而 search 发生变化时， total 不会重新计算。
+  :::
+
+```tsx
+import React, { useMemo, useState } from "react";
+
+function App() {
+  const [search, setSearch] = useState("");
+  const [goods, setGoods] = useState([
+    { id: 1, name: "苹果", price: 10, count: 1 },
+    { id: 2, name: "香蕉", price: 20, count: 1 },
+    { id: 3, name: "橘子", price: 30, count: 1 }
+  ]);
+  const handleAdd = (id: number) => {
+    setGoods(goods.map(item => (item.id === id ? { ...item, count: item.count + 1 } : item)));
+  };
+  const handleSub = (id: number) => {
+    setGoods(goods.map(item => (item.id === id ? { ...item, count: item.count - 1 } : item)));
+  };
+
+  // 使用 useMemo 缓存计算结果
+  const total = useMemo(() => {
+    console.log("total");
+    return goods.reduce((total, item) => total + item.price * item.count, 0);
+  }, [goods]);
+
+  return (
+    <div>
+      <h1>父组件</h1>
+      <input type="text" value={search} onChange={e => setSearch(e.target.value)} />
+      <table border={1} cellPadding={5} cellSpacing={0}>
+        <thead>
+          <tr>
+            <th>商品名称</th>
+            <th>商品价格</th>
+            <th>商品数量</th>
+          </tr>
+        </thead>
+        <tbody>
+          {goods.map(item => (
+            <tr key={item.id}>
+              <td>{item.name}</td>
+              <td>{item.price * item.count}</td>
+              <td>
+                <button onClick={() => handleAdd(item.id)}>+</button>
+                <span>{item.count}</span>
+                <button onClick={() => handleSub(item.id)}>-</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h2>总价：{total}</h2>
+    </div>
+  );
+}
+
+export default App;
+```
+
+#### [4].执行时机
+
+- 如果依赖项是个空数组，那么 useMemo 的回调函数会执行一次
+- 指定依赖项，当依赖项发生变化时， useMemo 的回调函数会执行
+- 不指定依赖项，不推荐这么用，因为每次渲染和更新都会执行
+
+#### [5].useMemo 总结
+
+##### (1). 使用场景：
+
+- 当需要缓存复杂计算结果时
+- 当需要避免不必要的重新计算时
+- 当计算逻辑复杂且耗时时
+
+##### (2). 优点：
+
+- 通过记忆化避免不必要的重新计算
+- 提高应用性能
+- 减少资源消耗
+
+##### (3). 注意事项：
+
+- 不要过度使用，只在确实需要优化的组件上使用
+- 如果依赖项经常变化，useMemo 的效果会大打折扣
+- 如果计算逻辑简单，使用 useMemo 的开销可能比重新计算还大
+
+### 2. React.memo
+
+<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">React.memo</span> 是一个 React API，用于优化性能。它通过记忆上一次的渲染结果，仅当 props 发生变化时才会重新渲染, 避免重新渲染。
+
+#### [1].使用方法
+
+使用 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">React.memo</span> 包裹组件<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">一般用于子组件</span>，可以避免组件重新渲染。
+
+```tsx
+// 第一种用法
+import React, { memo } from "react";
+const MyComponent = React.memo(({ prop1, prop2 }) => {
+  // 组件逻辑
+});
+const App = () => {
+  return <MyComponent prop1="value1" prop2="value2" />;
+};
+
+// 第二种用法
+import React, { memo } from "react";
+
+const Child = memo(({ name }) => {
+  return <div>{name}</div>;
+});
+const App = () => {
+  return <Child name="value1" />;
+};
+```
+
+#### [2].案例
+
+首先明确 React 组件的渲染条件：
+
+- 组件的 props 发生变化
+- 组件的 state 发生变化
+- useContext 发生变化
+
+:::tip
+
+- 我们来看下面这个例子，这个例子没有使用 memo 进行缓存，所以每次父组件的 state 发生变化，子组件都会重新渲染。
+- 而我们的子组件只用到了 user 的信息，但是父组件每次 search 发生变化，子组件也会重新渲染, 这样就就造成了没必要的渲染所以我们使用 memo 缓存。
+- 当我们使用 memo 缓存后，只有 user 发生变化时，子组件才会重新渲染, 而 search 发生变化时，子组件不会重新渲染。
+  :::
+
+```tsx
+import React, { useMemo, useState } from "react";
+interface User {
+  name: string;
+  age: number;
+  email: string;
+}
+interface CardProps {
+  user: User;
+}
+const Card = React.memo(function ({ user }: CardProps) {
+  console.log("Card render");
+  const styles = {
+    backgroundColor: "lightblue",
+    padding: "20px",
+    borderRadius: "10px",
+    margin: "10px"
+  };
+  return (
+    <div style={styles}>
+      <h1>{user.name}</h1>
+      <p>{user.age}</p>
+      <p>{user.email}</p>
+    </div>
+  );
+});
+function App() {
+  const [users, setUsers] = useState<User>({
+    name: "张三",
+    age: 18,
+    email: "zhangsan@example.com"
+  });
+  const [search, setSearch] = useState("");
+  return (
+    <div>
+      <h1>父组件</h1>
+      <input value={search} onChange={e => setSearch(e.target.value)} />
+      <div>
+        <button
+          onClick={() =>
+            setUsers({
+              name: "李四",
+              age: Math.random() * 100,
+              email: "lisi@example.com"
+            })
+          }
+        >
+          更新user
+        </button>
+      </div>
+      <Card user={users} />
+    </div>
+  );
+}
+
+export default App;
+```
+
+#### [5].React.memo 总结
+
+##### (1). 使用场景：
+
+- 当子组件接收的 props 不经常变化时
+- 当组件重新渲染的开销较大时
+- 当需要避免不必要的渲染时
+
+##### (2). 优点：
+
+- 通过记忆化避免不必要的重新计算
+- 提高应用性能
+- 减少资源消耗
+
+##### (3). 注意事项：
+
+- 不要过度使用，只在确实需要优化的组件上使用
+- 对于简单的组件，使用 memo 的开销可能比重新渲染还大
+- 如果 props 经常变化， memo 的效果会大打折扣
+
+### 3. useCallback
+
+<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useCallback</span> 用于优化性能，返回一个记忆化的回调函数，可以减少不必要的重新渲染，也就是说它是用于缓存组件内的函数，避免函数的重复创建。
+
+#### [1].使用方法
+
+```tsx
+import React, { useCallback } from "react";
+
+const handleClick = useCallback(() => {
+  console.log("handleClick");
+}, []);
+
+const memoizedCallback = useCallback(() => {
+  doSomething(a, b);
+}, [a, b]);
+```
+
+为什么需要 useCallback？
+
+在 React 中，函数组件的重新渲染会导致组件内的函数被重新创建，这可能会导致性能问题。useCallback 通过缓存函数，可以减少不必要的重新渲染，提高性能。
+
+useMemo 和 useCallback 的区别？
+共同点：
+
+- 入参是一个函数，依赖项都是一模一样的
+
+不同点：
+
+- useMemo 返回函数执行之后的结果，useCallback 返回的是一个当前所缓存的函数
+- useMemo 用于缓存计算结果，而 useCallback 用于缓存函数。
+
+#### [2].参数
+
+入参
+
+- callback：回调函数
+- deps：依赖项数组，当依赖项发生变化时，回调函数会被重新创建，跟 useEffect 一样。
+
+返回值
+
+- 返回一个记忆化的回调函数，可以减少函数的创建次数，提高性能。
+
+#### [3].案例
+
+- 我们创建了一个 Child 子组件，并使用 React.memo 进行优化，memo 在上一章讲过了，他会检测 props 是否发生变化，如果发生变化，就会重新渲染子组件。
+- 我们创建了一个 childCallback 函数，传递给子组件，然后我们输入框更改值，发现子组件居然重新渲染了，但是我们并没有更改 props，这是为什么呢？
+- 这是因为输入框的值发生变化，App 就会重新渲染，然后 childCallback 函数就会被重新创建，然后传递给子组件，子组件会判断这个函数是否发生变化，但是每次创建的函数内存地址都不一样，所以子组件会重新渲染。
+
+```tsx
+import React, { useCallback, useState } from "react";
+const Child = React.memo(({ user, callback }: { user: { name: string; age: number }; callback: () => void }) => {
+  console.log("Render Child");
+  const styles = {
+    color: "red",
+    fontSize: "20px"
+  };
+  return (
+    <div style={styles}>
+      <div>{user.name}</div>
+      <div>{user.age}</div>
+      <button onClick={callback}>callback</button>
+    </div>
+  );
+});
+
+const App: React.FC = () => {
+  const [search, setSearch] = useState("");
+  const [user, setUser] = useState({
+    name: "John",
+    age: 20
+  });
+  const childCallback = () => {
+    console.log("callback 执行了");
+  };
+  return (
+    <>
+      <input type="text" value={search} onChange={e => setSearch(e.target.value)} />
+      <Child callback={childCallback} user={user} />
+    </>
+  );
+};
+
+export default App;
+```
+
+因为 App 重新渲染了，所以 childCallback 函数会被重新创建，然后传递给子组件，子组件会判断这个函数是否发生变化，但是每次创建的函数内存地址都不一样，所以子组件会重新渲染。
+
+只需要在 childCallback 函数上使用 useCallback，就可以优化性能。
+
+```tsx
+const childCallback = useCallback(() => {
+  console.log("callback 执行了");
+}, []);
+```
+
+#### [4].useCallback 总结
+
+- useCallback 的使用需要有所节制，不要盲目地对每个方法应用 useCallback，这样做可能会导致不必要的性能损失。useCallback 本身也需要一定的性能开销。
+- useCallback 并不是为了阻止函数的重新创建，而是通过依赖项来决定是否返回新的函数或旧的函数，从而在依赖项不变的情况下确保函数的地址不变。

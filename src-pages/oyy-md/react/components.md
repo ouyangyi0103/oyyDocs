@@ -121,9 +121,9 @@ export default Test;
 
 ##### 第一种方式 解构
 
-将属性变为可选的这儿使用 title 举例 title?: string
+将属性变为可选的这儿使用 title 举例 `title?: string`
 
-然后将 props 进行解构，定义默认值 {title = '默认标题'}
+然后将 props 进行解构，定义默认值 `{title = '默认标题'}`
 
 ```tsx
 import React from "react";
@@ -353,3 +353,246 @@ export default App;
 #### [3].特殊的表单 File
 
 对于 file 类型的表单控件，它是一个特殊的组件，因为它的值只能由用户通过文件选择操作来设置，而不能通过程序直接设置。这使得它在 React 中的处理方式与其他表单元素有所不同，它只能是非受控组件。
+
+### 3.异步组件 Suspense
+
+Suspense 是一种异步渲染机制，其核心理念是在组件加载或数据获取过程中，先展示一个占位符（loading state），从而实现更自然流畅的用户界面更新体验。
+
+#### [1].Suspense 的基本使用
+
+```tsx
+<Suspense fallback={<div>Loading...</div>}>
+  <AsyncComponent />
+</Suspense>
+```
+
+#### [2].应用场景
+
+- 异步组件加载：通过代码分包实现组件的按需加载，有效减少首屏加载时的资源体积，提升应用性能。
+- 异步数据加载：在数据请求过程中展示优雅的过渡状态（如 loading 动画、骨架屏等），为用户提供更流畅的交互体验。
+- 异步图片资源加载：智能管理图片资源的加载状态，在图片完全加载前显示占位内容，确保页面布局稳定，提升用户体验。
+
+#### [3].案例
+
+创建一个异步组件
+
+- src/components/Async/index.tsx
+
+```tsx
+export const AsyncComponent = () => {
+  return <div>Async</div>;
+};
+
+export default AsyncComponent;
+```
+
+- src/App.tsx
+  使用 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">lazy</span> 进行异步加载组件，使用 Suspense 包裹异步组件，fallback 指定加载过程中的占位组件
+
+```tsx
+import React, { useRef, useState, Suspense, lazy } from "react";
+const AsyncComponent = lazy(() => import("./components/Async"));
+const App: React.FC = () => {
+  return (
+    <>
+      <Suspense fallback={<div>loading</div>}>
+        <AsyncComponent />
+      </Suspense>
+    </>
+  );
+};
+
+export default App;
+```
+
+##### (1). 异步数据加载
+
+我们实现卡片详情，在数据加载过程中展示骨架屏，数据加载完成后展示卡片详情。
+
+- public/data.json.
+
+```json
+{
+  "data": {
+    "id": 1,
+    "address": "北京市房山区住岗子村10086",
+    "name": "小满",
+    "age": 26,
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=小满"
+  }
+}
+```
+
+创建一个骨架屏组件，用于在数据加载过程中展示，提升用户体验,当然你封装 loading 组件也是可以的。
+
+- src/components/skeleton/index.tsx
+
+```tsx
+import "./index.css";
+export const Skeleton = () => {
+  return (
+    <div className="skeleton">
+      <header className="skeleton-header">
+        <div className="skeleton-name"></div>
+        <div className="skeleton-age"></div>
+      </header>
+      <section className="skeleton-content">
+        <div className="skeleton-address"></div>
+        <div className="skeleton-avatar"></div>
+      </section>
+    </div>
+  );
+};
+```
+
+:::tip
+建议升级到 React19, 因为我们会用到一个 use 的 API, 这个 API 在 React18 中是实验性特性，在 React19 纳入正式特性
+:::
+
+创建一个卡片组件，用于展示数据，这里面介绍一个新的 API <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">use</span>
+
+<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">use</span> API 用于获取组件内部的 Promise,或者 Context 的内容，该案例使用了 use 获取 Promise 返回的数据并且故意延迟 2 秒返回，模拟网络请求。
+
+- src/components/Card/index.tsx
+
+```tsx
+import { use } from "react";
+import "./index.css";
+interface Data {
+  name: string;
+  age: number;
+  address: string;
+  avatar: string;
+}
+
+const getData = async () => {
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  return (await fetch("http://localhost:5173/data.json").then(res => res.json())) as { data: Data };
+};
+
+const dataPromise = getData();
+
+const Card: React.FC = () => {
+  const { data } = use(dataPromise);
+  return (
+    <div className="card">
+      <header className="card-header">
+        <div className="card-name">{data.name}</div>
+        <div className="card-age">{data.age}</div>
+      </header>
+      <section className="card-content">
+        <div className="card-address">{data.address}</div>
+        <div className="card-avatar">
+          <img width={50} height={50} src={data.avatar} alt="" />
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default Card;
+```
+
+使用方式如下: 通过 Suspense 包裹 Card 组件，fallback 指定骨架屏组件
+
+- src/App.tsx
+
+```tsx
+import React, { useRef, useState, Suspense, lazy } from "react";
+import Card from "./components/Card";
+import { Skeleton } from "./components/Skeleton";
+const App: React.FC = () => {
+  return (
+    <>
+      <Suspense fallback={<Skeleton />}>
+        <Card />
+      </Suspense>
+    </>
+  );
+};
+
+export default App;
+```
+
+### 4.传送 API createPortal
+
+注意这是一个 API，不是组件，他的作用是：将一个组件渲染到 DOM 的任意位置，跟 Vue 的 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">Teleport</span> 组件类似。
+
+#### [1].基本使用
+
+```tsx
+// 注意：createPortal 是 react-dom 中的 API，不是 react 中的 API
+import { createPortal } from "react-dom";
+
+const App = () => {
+  return createPortal(<div>小满zs</div>, document.body);
+};
+
+export default App;
+```
+
+#### [2].应用场景
+
+- 弹窗
+- 下拉框
+- 全局提示
+- 全局遮罩
+- 全局 Loading
+
+#### [3].案例
+
+封装弹框组件
+
+- src/components/Modal/index.tsx
+
+```tsx
+import "./index.css";
+export const Modal = () => {
+  return (
+    <div className="modal">
+      <div className="modal-header">
+        <div className="modal-title">标题</div>
+      </div>
+      <div className="modal-content">
+        <h1>Modal</h1>
+      </div>
+      <div className="modal-footer">
+        <button className="modal-close-button">关闭</button>
+        <button className="modal-confirm-button">确定</button>
+      </div>
+    </div>
+  );
+};
+```
+
+如果外层有 position: relative 的样式，那么弹框会相对于外层进行定位，如果外层没有 position: relative 的样式，那么弹框会相对于 body 进行定位,故此这个 Modal 不稳定，所以需要使用 createPortal 来将 Modal 挂载到 body 上，或者直接将定位改成 position: fixed,两种方案。
+
+- 方案一：使用 createPortal
+
+```tsx
+import "./index.css";
+import { createPortal } from "react-dom";
+export const Modal = () => {
+  return createPortal(
+    <div className="modal">
+      <div className="modal-header">
+        <div className="modal-title">标题</div>
+      </div>
+      <div className="modal-content">
+        <h1>Modal</h1>
+      </div>
+      <div className="modal-footer">
+        <button className="modal-close-button">关闭</button>
+        <button className="modal-confirm-button">确定</button>
+      </div>
+    </div>,
+    document.body
+  );
+};
+```
+
+- 方案二：使用 position: fixed
+
+#### 注意事项
+
+推荐使用 createPortal 因为他更灵活，可以挂载到任意位置，而 position: fixed,会有很多问题，在默认的情况下他是根据浏览器视口进行定位的，但是如果父级设置了 transform、perspective、filter 或 backdrop-filter 属性非 none 时，他就会相对于父级进行定位，这样就会导致 Modal 组件定位不准确(他不是一定按照浏览器视口进行定位)，所以不推荐使用。

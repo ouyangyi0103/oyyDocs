@@ -1,4 +1,4 @@
----
+<!-- ---
 outline: deep
 head:
   - - meta
@@ -73,7 +73,7 @@ ReactDOM.createRoot(root).render(
 如果做一个小项目可以使用声明模式，如果要做企业级项目可以使用数据模式。
 :::
 
-### [1]. 基本使用
+### 1. 基本使用
 
 - src/router/index.ts
 
@@ -115,8 +115,7 @@ export default App;
 
 ## 二、路由模式
 
-在 React RouterV7 中，是拥有不同的路由模式，路由模式的选择将直接影响你的整个项目。React Router 提供了四种核心路由创建函数：
-<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">createBrowserRouter</span>、<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">createHashRouter</span>、<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">createMemoryRouter</span> 和 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">createStaticRouter</span>
+在 React RouterV7 中，是拥有不同的路由模式，路由模式的选择将直接影响你的整个项目。React Router 提供了四种核心路由创建函数：createBrowserRouter、createHashRouter、createMemoryRouter 和 createStaticRouter
 
 ### 1. createBrowserRouter(推荐)
 
@@ -209,28 +208,9 @@ const router = createStaticRouter([{ path: "/", element: <App /> }]);
 
 - Nginx 配置
 
-```tsx
 location / {
-  try_files $uri $uri/ /index.html;
+try_files $uri $uri/ /index.html;
 }
-```
-
-- Apache 配置
-
-```ts
-<IfModule mod_negotiation.c>
-  Options -MultiViews
-</IfModule>
-
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
-</IfModule>
-```
 
 - Node.js 配置
 
@@ -260,11 +240,11 @@ http
 
 ## 三、路由种类
 
-React-Router V7 的路由种类是非常多的，有<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">嵌套路由</span> <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">布局路由</span> <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">索引路由</span> <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">前缀路由</span> <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">动态路由</span>
+React-Router V7 的路由种类是非常多的，有嵌套路由、布局路由、索引路由、前缀路由、动态路由
 
 ### 1. 嵌套路由
 
-嵌套路由就是父路由中嵌套子路由<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">children</span>，子路由可以继承父路由的布局，也可以有自己的布局。
+嵌套路由就是父路由中嵌套子路由 children，子路由可以继承父路由的布局，也可以有自己的布局。
 
 ```tsx
 const router = createBrowserRouter([{ path: "/", element: <App />, children: [{ path: "about", element: <About /> }] }]);
@@ -272,9 +252,9 @@ const router = createBrowserRouter([{ path: "/", element: <App />, children: [{ 
 
 :::tip
 
-- 父路由的 path 是 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">index</span> 开始，所以访问子路由的时候需要加上父路由的 path 例如 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">/index/home</span> <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">/index/about</span>
-- 子路由不需要增加<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">/</span> 了直接写子路由的 path 即可
-- 子路由默认是不显示的，需要父路由通过<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">Outlet</span> 组件来显示子路由 outlet 就是类似于 Vue 的<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">router-view</span> 展示子路由的一个容器
+- 父路由的 path 是 index 开始，所以访问子路由的时候需要加上父路由的 path 例如 /index/home /index/about
+- 子路由不需要增加 / 了直接写子路由的 path 即可
+- 子路由默认是不显示的，需要父路由通过 Outlet 组件来显示子路由 outlet 就是类似于 Vue 的 router-view 展示子路由的一个容器
 - 子路由的层级可以无限嵌套，但是要注意的是，一般实际工作中就是 2-3 层
   :::
 
@@ -376,7 +356,7 @@ const router = createBrowserRouter([
 
 ### 5. 动态路由
 
-动态路由通过 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">:参数名</span> 语法来定义动态段：
+动态路由通过 :参数名 语法来定义动态段：
 
 ```tsx
 const router = createBrowserRouter([
@@ -411,10 +391,8 @@ function Card() {
 
 QueryString 的方式就是使用 ? 来传递参数，例如：
 
-```tsx
 #多个参数用 & 连接
-/user?name=小满zs&age=18
-```
+/user?name=小满 zs&age=18
 
 #### [1]. 跳转方式
 
@@ -523,3 +501,450 @@ console.log(state.age); //获取age参数
 选择建议：必要参数用 Params，筛选条件用 Query，临时数据用 State。
 
 ## 五、路由懒加载
+
+懒加载是一种优化技术，用于延迟加载组件，直到需要时才加载。这样可以减少初始加载时间，提高页面性能。
+
+通过在路由对象中使用 lazy 属性来实现懒加载。
+
+使用懒加载打包后，会把懒加载的组件打包成一个独立的文件，从而减小主包的大小。
+
+```tsx
+import { createBrowserRouter } from 'react-router';
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms)); // 模拟异步请求
+
+const router = createBrowserRouter([
+    {
+        Component: Layout,{
+          path: 'about',
+          lazy: async () => {
+            await sleep(2000); // 模拟异步请求
+            const Component = await import('../pages/About'); // 异步导入组件
+            console.log(Component);
+            return {
+              Component: Component.default,
+            }
+          }
+        },
+    },
+]);
+```
+
+### 1.体验优化
+
+例如 about 是一个懒加载的组件，在切换到 about 路由时，展示的还是上一个路由的组件，直到懒加载的组件加载完成，才会展示新的组件，这样用户会感觉页面卡顿，用户体验不好。
+
+#### [1].使用状态优化 useNavigation
+
+```tsx
+import { Outlet, useNavigation } from "react-router";
+import { Alert, Spin } from "antd";
+export default function Content() {
+  const navigation = useNavigation();
+  console.log(navigation.state);
+  const isLoading = navigation.state === "loading";
+  return (
+    <div>
+      {isLoading ? (
+        <Spin size="large" tip="loading...">
+          <Alert description="小满zs小满zs小满zs小满zs小满zs小满zs小满zs小满zsv" message="加载中" type="info" />
+        </Spin>
+      ) : (
+        <Outlet />
+      )}
+    </div>
+  );
+}
+```
+
+## 六、路由操作
+
+路由的操作是由两个部分组成的:
+
+- loader: 用于获取数据，在路由切换时，会自动调用 loader 函数，获取数据，并返回给组件。
+- action: 用于提交数据，在路由切换时，会自动调用 action 函数，提交数据，并返回给组件。
+
+### 1.loader
+
+:::tip
+只有 GET 请求才会触发 loader，所以适合用来获取数据
+:::
+
+在之前的话我们是 RenderComponent 渲染组件 -> Fetch 获取数据 -> RenderView 渲染视图
+
+有了 loader 之后是 loader 通过 fetch 获取数据 -> useLoaderData 获取数据 -> RenderComponent 渲染组件
+
+```tsx
+//router/index.tsx
+import { createBrowserRouter } from "react-router";
+const router = createBrowserRouter([
+  {
+    path: "/",
+    Component: App,
+    loader: async () => {
+      const data = await response.json();
+      const response = await getUser(data);
+      // 获取数据;
+      return {
+        data: response.list,
+        message: "success"
+      };
+    }
+  }
+]);
+
+//App.tsx
+import { useLoaderData } from "react-router";
+const App = () => {
+  const { data, message } = useLoaderData();
+  // 获取数据;
+  return <div>{data}</div>;
+};
+```
+
+### 2.action
+
+一般用于表单提交，删除，修改等操作。
+
+:::tip
+只有 POST DELETE PATCH PUT 等请求才会触发 action，所以适合用来提交表单
+:::
+
+```tsx
+//router/index.tsx
+import { createBrowserRouter } from "react-router";
+const router = createBrowserRouter([
+  {
+    // path: '/index',
+    Component: Layout,
+    children: [
+      {
+        path: "about",
+        Component: About,
+        action: async ({ request }) => {
+          const formData = await request.formData();
+          await createUser(formData);
+          创建用户;
+          return {
+            data: table,
+            success: true
+          };
+        }
+      }
+    ]
+  }
+]);
+
+//App.tsx
+import { useSubmit } from "react-router";
+import { Card, Form, Input, Button } from "antd";
+export default function About() {
+  const submit = useSubmit();
+  return (
+    <Card>
+      <Form
+        onFinish={values => {
+          submit(values, { method: "post" }); // 提交表单
+        }}
+      >
+        <Form.Item name="name" label="姓名">
+          <Input />
+        </Form.Item>
+        <Form.Item name="age" label="年龄">
+          <Input />
+        </Form.Item>
+        <Button type="primary" htmlType="submit">
+          提交
+        </Button>
+      </Form>
+    </Card>
+  );
+}
+```
+
+### 3.状态变更
+
+我们可以配合 useNavigation 来管理表单提交的状态
+
+1. GET 提交会经过以下状态:
+
+```tsx
+idle -> loading -> idle
+```
+
+2. POST 提交会经过以下状态:
+
+```tsx
+idle -> submitting ->loading -> idle
+```
+
+所以我们可以根据这些状态来控制 disabled loading 等行为
+
+```tsx
+import { useNavigation, useSubmit } from "react-router";
+const submit = useSubmit();
+const navigation = useNavigation();
+
+return (
+  <div>
+    {navigation.state === "loading" && <div>loading...</div>}
+    <button disabled={navigation.state === "submitting"}>提交</button>
+  </div>
+);
+```
+
+## 七、路由导航
+
+### 1.Link
+
+Link 组件是一个用于导航到其他页面的组件，他会被渲染成一个特殊的<a>标签，跟传统 a 标签不同的是，他不会刷新页面，而是会通过 router 管理路由。
+
+#### [1].使用方法
+
+```tsx
+import { Link } from "react-router";
+
+export default function App() {
+  return <Link to="/about">About</Link>;
+}
+```
+
+##### (1).参数
+
+- to：要导航到的路径
+- replace：是否替换当前路径
+- state：要传递给目标页面的状态
+- relative：相对于当前路径的导航方式
+- reloadDocument：是否重新加载页面
+- preventScrollReset：是否阻止滚动位置重置
+- viewTransition：是否启用视图过渡
+
+##### (2).案例
+
+- to
+
+to 属性是一个字符串，表示要导航到的路径。
+
+```tsx
+<Link to="/about">About</Link>
+```
+
+- replace
+
+replace 属性是一个布尔值，表示是否替换当前路径，如果为 true，则导航不会在浏览器历史记录中创建新的条目，而是替换当前条目。
+
+```tsx
+<Link replace to="/about">
+  About
+</Link>
+```
+
+- state
+
+state 属性是一个对象，可以把参数传递给目标页面。
+
+```tsx
+<Link state={{ from: "home" }} to="/about">
+  About
+</Link>;
+
+// 在目标页面获取状态
+import { useLocation } from "react-router";
+
+export default function App() {
+  const location = useLocation();
+  console.log(location.state);
+  return <div>Location: {location.state.from}</div>;
+}
+```
+
+- relative
+
+relative 属性是一个字符串，表示相对于当前路径的导航方式，默认的方式是绝对路径，如果想要使用相对路径，可以设置为 path。
+
+```tsx
+//默认是绝对路径
+<Link relative="route" to="/about">About</Link>
+
+//使用相对路径
+<Link relative="path" to="../about">About</Link>
+
+//例如当前的路由是/index/home，那么使用绝对路径导航到/about，会变成/about
+<Link to="/about">About</Link>
+//可以使用相对路径导航到/index/about
+<Link relative="path" to="../about">About</Link>
+```
+
+- reloadDocument
+
+reloadDocument 属性是一个布尔值，表示是否重新加载页面。
+
+```tsx
+<Link reloadDocument to="/about">
+  About
+</Link>
+```
+
+- preventScrollReset
+
+preventScrollReset 属性是一个布尔值，表示是否阻止滚动位置重置。
+
+```tsx
+<Link preventScrollReset to="/about">
+  About
+</Link>
+```
+
+- viewTransition
+
+viewTransition 属性是一个布尔值，表示是否启用视图过渡，自动增加页面跳转的动画效果。
+
+```tsx
+<Link viewTransition to="/about">
+  About
+</Link>
+```
+
+### 2.NavLink
+
+NavLink 的使用方式和 Link 组件类似，但是 NavLink 组件可以实现路由的激活状态。
+
+#### [1].基本使用
+
+```tsx
+import { NavLink } from "react-router";
+
+export default function App() {
+  return <NavLink to="/about">About</NavLink>;
+}
+```
+
+#### [2].参数和 Link 参数一样
+
+#### [3].区别
+
+Navlink 会经过以下三个状态的转换，而 Link 不会，所以 Navlink 就是一个 link 的增强版。
+
+- active：激活状态(当前路由和 to 属性匹配)
+- pending：等待状态(loader 有数据需要加载)
+- transitioning：过渡状态(通过 viewTransition 属性触发)
+
+Navlink 会根据当前路由和 to 属性是否匹配，自动激活。
+
+react-router 会为其自动添加样式
+
+```tsx
+a.active {
+  color: red;
+}
+
+a.pending {
+  animate: pulse 1s infinite;
+}
+
+a.transitioning {
+  /* css transition is running */
+}
+```
+
+如果不喜欢写样式也可以直接用 style 属性来设置
+
+```tsx
+<NavLink
+  viewTransition
+  style={({ isActive, isPending, isTransitioning }) => {
+    return {
+      marginRight: "10px",
+      color: isActive ? "red" : "blue",
+      backgroundColor: isPending ? "yellow" : "transparent"
+    };
+  }}
+  to="/index/about"
+>
+  About
+</NavLink>
+```
+
+## 八、编程式导航 useNavigate
+
+```tsx
+import { useNavigate } from "react-router";
+
+const navigate = useNavigate();
+setTimeout(() => {
+  navigate("/home");
+}, 1000);
+```
+
+### 1.参数和 Link 组件一样
+
+- 第一个参数: to 跳转的路由 navigate(to)
+- 第二个参数: options 配置对象 navigate(to,options)
+
+  - replace: 是否替换当前路由
+  - state: 传递的数据
+  - relative: 相对路径
+  - preventScrollReset: 是否阻止滚动重置
+
+- to
+
+```tsx
+import { useNavigate } from "react-router"; // 导入useNavigate
+const navigate = useNavigate(); // 获取navigate函数
+navigate("/home"); // 跳转路由
+```
+
+- options-replace
+  跳转页面的时候，是否替换当前路由
+
+```tsx
+navigate("/home", { replace: true });
+```
+
+- options-state
+  传递数据，在跳转的页面中使用通过 useLocation 的 state 属性获取
+
+```tsx
+navigate("/home", { state: { name: "张三" } });
+```
+
+- options-relative
+  跳转的方式，默认是绝对路径，如果想要使用相对路径，需要设置为 relative:'path'
+
+```tsx
+navigate("/home", { relative: "path" });
+```
+
+- options-preventScrollReset
+  跳转页面的时候，是否阻止滚动重置
+
+```tsx
+navigate("/home", { preventScrollReset: true });
+```
+
+- options-viewTransition
+  跳转页面的时候，是否启用视图过渡,自动增加页面跳转的动画效果。
+
+```tsx
+navigate("/home", { viewTransition: true });
+```
+
+## 九、重定向 redirect
+
+redirect 是用于重定向，通常用于 loader 中，当 loader 返回 redirect 的时候，会自动重定向到 redirect 指定的路由。
+
+权限验证，例如这个路由需要登录才能访问，如果未登录则重定向到登录页。
+
+```tsx
+import { redirect } from "react-router";
+{
+  path: "/home",
+  loader: async ({request}) => {
+    const isLogin = await checkLogin();
+    if(!isLogin) return redirect('/login');
+    return {
+        data: 'home'
+    }
+  }
+}
+``` -->

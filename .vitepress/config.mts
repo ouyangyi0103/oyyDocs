@@ -39,29 +39,33 @@ export default defineConfig({
           {
             text: "一、TypeScript",
             items: [
-              { text: "1、基础类型", link: "src-pages/oyy-md/typescript/ts-base" },
-              { text: "2、高级类型", link: "src-pages/oyy-md/typescript/ts-hightype" },
-              { text: "3、类-Symbol", link: "src-pages/oyy-md/typescript/ts-class-symbol" },
-              { text: "3、泛型", link: "src-pages/oyy-md/typescript/ts-generic" },
-              { text: "4、模块化解析", link: "src-pages/oyy-md/typescript/ts-module" },
-              { text: "5、装饰器", link: "src-pages/oyy-md/typescript/ts-decorator" },
-              { text: "6、发布订阅模式-set-map", link: "src-pages/oyy-md/typescript/ts-pubsub" },
-              { text: "7、Proxy & Reflect", link: "src-pages/oyy-md/typescript/ts-proxy-reflect" },
-              { text: "8、类型守卫-类型兼容", link: "src-pages/oyy-md/typescript/ts-type-guard" },
-              { text: "9、infer关键字", link: "src-pages/oyy-md/typescript/ts-infer" }
+              { text: "基础类型", link: "src-pages/oyy-md/typescript/ts-base" },
+              { text: "高级类型", link: "src-pages/oyy-md/typescript/ts-hightype" },
+              { text: "类-Symbol", link: "src-pages/oyy-md/typescript/ts-class-symbol" },
+              { text: "泛型", link: "src-pages/oyy-md/typescript/ts-generic" },
+              { text: "模块化解析", link: "src-pages/oyy-md/typescript/ts-module" },
+              { text: "装饰器", link: "src-pages/oyy-md/typescript/ts-decorator" },
+              { text: "发布订阅模式-set-map", link: "src-pages/oyy-md/typescript/ts-pubsub" },
+              { text: "Proxy & Reflect", link: "src-pages/oyy-md/typescript/ts-proxy-reflect" },
+              { text: "类型守卫-类型兼容", link: "src-pages/oyy-md/typescript/ts-type-guard" },
+              { text: "infer关键字", link: "src-pages/oyy-md/typescript/ts-infer" }
             ]
           },
           {
             text: "二、React",
             items: [
-              { text: "1、JSX", link: "src-pages/oyy-md/react/jsx" },
-              { text: "2、使用工具", link: "src-pages/oyy-md/react/utils" },
-              { text: "3、原理", link: "src-pages/oyy-md/react/principle" },
-              { text: "4、Hooks", link: "src-pages/oyy-md/react/hooks" },
-              { text: "5、组件", link: "src-pages/oyy-md/react/components" },
-              { text: "6、路由", link: "src-pages/oyy-md/react/router" },
-              { text: "7、状态管理-Zustand", link: "src-pages/oyy-md/react/zustand" }
+              { text: "JSX", link: "src-pages/oyy-md/react/jsx" },
+              { text: "使用工具", link: "src-pages/oyy-md/react/utils" },
+              { text: "原理", link: "src-pages/oyy-md/react/principle" },
+              { text: "Hooks", link: "src-pages/oyy-md/react/hooks" },
+              { text: "组件", link: "src-pages/oyy-md/react/components" },
+              { text: "路由", link: "src-pages/oyy-md/react/router" },
+              { text: "状态管理-Zustand", link: "src-pages/oyy-md/react/zustand" }
             ]
+          },
+          {
+            text: "三、Next",
+            items: [{ text: "基础使用", link: "src-pages/oyy-md/next/base" }]
           }
         ]
       }

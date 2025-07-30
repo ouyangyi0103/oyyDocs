@@ -1973,3 +1973,457 @@ export async function GET(request: Request) {
 - **调试**: 使用调试端点和响应头来排查缓存问题
 
 通过合理使用这些缓存控制机制，可以在保证性能的同时确保数据的实时性和准确性。
+
+## 十六、中间件 Middleware
+
+Next.js 中间件允许你在请求完成之前运行代码。基于传入的请求，你可以修改响应，通过重写、重定向、修改请求或响应头，或直接响应。
+
+### 1. 基本概念
+
+中间件在缓存内容和路由匹配之前运行。适用于需要在每个路由渲染之前执行逻辑的场景。
+
+#### 创建中间件文件
+
+在项目根目录创建 `middleware.ts` (或 `.js`)：
+
+```typescript
+// middleware.ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function middleware(request: NextRequest) {
+  // 中间件逻辑
+  return NextResponse.next();
+}
+
+// 配置匹配路径
+export const config = {
+  matcher: "/about/:path*"
+};
+```
+
+### 2. 常用功能
+
+#### 2.1 请求重定向
+
+```typescript
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function middleware(request: NextRequest) {
+  // 重定向到登录页
+  if (request.nextUrl.pathname.startsWith("/dashboard")) {
+    const token = request.cookies.get("token");
+
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
+  // 条件重定向
+  if (request.nextUrl.pathname === "/old-page") {
+    return NextResponse.redirect(new URL("/new-page", request.url));
+  }
+
+  return NextResponse.next();
+}
+```
+
+#### 2.2 请求重写
+
+```typescript
+export function middleware(request: NextRequest) {
+  // URL 重写
+  if (request.nextUrl.pathname.startsWith("/api/old")) {
+    return NextResponse.rewrite(new URL("/api/new", request.url));
+  }
+
+  // 基于条件的重写
+  if (request.nextUrl.pathname === "/") {
+    const country = request.geo?.country || "US";
+    return NextResponse.rewrite(new URL(`/${country}`, request.url));
+  }
+
+  return NextResponse.next();
+}
+```
+
+#### 2.3 修改请求和响应头
+
+```typescript
+export function middleware(request: NextRequest) {
+  // 修改请求头
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+
+  // 创建响应并修改响应头
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders
+    }
+  });
+
+  // 设置响应头
+  response.headers.set("x-middleware-executed", "true");
+  response.headers.set("x-timestamp", Date.now().toString());
+
+  return response;
+}
+```
+
+#### 2.4 Cookie 操作
+
+```typescript
+export function middleware(request: NextRequest) {
+  const response = NextResponse.next();
+
+  // 读取 Cookie
+  const theme = request.cookies.get("theme");
+
+  if (!theme) {
+    // 设置默认主题
+    response.cookies.set("theme", "light");
+  }
+
+  // 设置多个 Cookie
+  response.cookies.set({
+    name: "session-id",
+    value: "abc123",
+    httpOnly: true,
+    secure: true,
+    maxAge: 3600
+  });
+
+  return response;
+}
+```
+
+### 3. 高级用法
+
+#### 3.1 身份验证中间件
+
+```typescript
+import { NextResponse } from "next/server";
+import { verify } from "jsonwebtoken";
+
+const protectedRoutes = ["/dashboard", "/profile", "/admin"];
+const authRoutes = ["/login", "/register"];
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get("token")?.value;
+
+  // 检查是否为保护路由
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+
+  // 检查是否为认证路由
+  const isAuthRoute = authRoutes.includes(pathname);
+
+  if (isProtectedRoute) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    try {
+      // 验证 JWT token
+      verify(token, process.env.JWT_SECRET!);
+    } catch (error) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
+  // 如果已登录用户访问认证页面，重定向到仪表板
+  if (isAuthRoute && token) {
+    try {
+      verify(token, process.env.JWT_SECRET!);
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    } catch (error) {
+      // Token 无效，允许访问认证页面
+    }
+  }
+
+  return NextResponse.next();
+}
+```
+
+#### 3.2 API 限流中间件
+
+```typescript
+// 简单的内存限流（生产环境建议使用 Redis）
+const rateLimitMap = new Map();
+
+export function middleware(request: NextRequest) {
+  const ip = request.ip || request.headers.get("x-forwarded-for") || "unknown";
+  const limit = 10; // 每分钟最多 10 次请求
+  const windowMs = 60 * 1000; // 1 分钟
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    const now = Date.now();
+    const userRequests = rateLimitMap.get(ip) || [];
+
+    // 清理过期请求记录
+    const validRequests = userRequests.filter((timestamp: number) => now - timestamp < windowMs);
+
+    if (validRequests.length >= limit) {
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+
+    // 记录当前请求
+    validRequests.push(now);
+    rateLimitMap.set(ip, validRequests);
+  }
+
+  return NextResponse.next();
+}
+```
+
+#### 3.3 国际化中间件
+
+```typescript
+const locales = ["en", "zh", "ja"];
+const defaultLocale = "en";
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 检查路径是否已包含语言前缀
+  const pathnameHasLocale = locales.some(locale => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`);
+
+  if (!pathnameHasLocale) {
+    // 从 Accept-Language 头或 Cookie 中获取语言偏好
+    const acceptLanguage = request.headers.get("accept-language");
+    const cookieLocale = request.cookies.get("locale")?.value;
+
+    let locale = defaultLocale;
+
+    if (cookieLocale && locales.includes(cookieLocale)) {
+      locale = cookieLocale;
+    } else if (acceptLanguage) {
+      locale = acceptLanguage.split(",")[0].split("-")[0];
+
+      if (!locales.includes(locale)) {
+        locale = defaultLocale;
+      }
+    }
+
+    return NextResponse.redirect(new URL(`/${locale}${pathname}`, request.url));
+  }
+
+  return NextResponse.next();
+}
+```
+
+### 4. 匹配器配置
+
+#### 4.1 基本匹配
+
+```typescript
+export const config = {
+  // 匹配特定路径
+  matcher: "/dashboard/:path*"
+};
+
+export const config = {
+  // 匹配多个路径
+  matcher: ["/dashboard/:path*", "/admin/:path*"]
+};
+```
+
+#### 4.2 高级匹配
+
+```typescript
+export const config = {
+  matcher: [
+    // 匹配所有路径除了静态文件和 API 路由
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+
+    // 只匹配 API 路由
+    "/api/:path*",
+
+    // 条件匹配
+    {
+      source: "/dashboard/:path*",
+      has: [
+        {
+          type: "header",
+          key: "x-middleware-preflight"
+        }
+      ]
+    }
+  ]
+};
+```
+
+### 5. 错误处理
+
+```typescript
+export function middleware(request: NextRequest) {
+  try {
+    // 中间件逻辑
+    const token = request.cookies.get("token")?.value;
+
+    if (request.nextUrl.pathname.startsWith("/api/protected")) {
+      if (!token) {
+        return new NextResponse("Unauthorized", { status: 401 });
+      }
+
+      // 验证 token
+      const payload = verify(token, process.env.JWT_SECRET!);
+
+      // 将用户信息添加到请求头
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set("x-user-id", payload.sub as string);
+
+      return NextResponse.next({
+        request: { headers: requestHeaders }
+      });
+    }
+  } catch (error) {
+    console.error("Middleware error:", error);
+
+    // 对于 API 路由返回错误响应
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return new NextResponse("Internal Server Error", { status: 500 });
+    }
+
+    // 对于页面路由重定向到错误页
+    return NextResponse.redirect(new URL("/error", request.url));
+  }
+
+  return NextResponse.next();
+}
+```
+
+### 6. 性能优化
+
+#### 6.1 条件执行
+
+```typescript
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 跳过静态资源
+  if (pathname.startsWith("/_next/") || pathname.startsWith("/api/") || pathname.includes(".")) {
+    return NextResponse.next();
+  }
+
+  // 只对特定路径执行中间件逻辑
+  if (pathname.startsWith("/dashboard")) {
+    return authMiddleware(request);
+  }
+
+  return NextResponse.next();
+}
+```
+
+#### 6.2 缓存优化
+
+```typescript
+// 使用简单缓存避免重复计算
+const cache = new Map();
+
+export function middleware(request: NextRequest) {
+  const key = `${request.ip}-${request.nextUrl.pathname}`;
+
+  if (cache.has(key)) {
+    const cached = cache.get(key);
+    if (Date.now() - cached.timestamp < 60000) {
+      // 1分钟缓存
+      return cached.response;
+    }
+  }
+
+  const response = NextResponse.next();
+
+  // 缓存结果
+  cache.set(key, {
+    response: response.clone(),
+    timestamp: Date.now()
+  });
+
+  return response;
+}
+```
+
+### 7. 调试和监控
+
+```typescript
+export function middleware(request: NextRequest) {
+  const startTime = Date.now();
+
+  console.log(`[Middleware] ${request.method} ${request.nextUrl.pathname}`);
+
+  const response = NextResponse.next();
+
+  // 添加执行时间头
+  response.headers.set("x-middleware-duration", `${Date.now() - startTime}ms`);
+
+  // 记录响应状态
+  console.log(`[Middleware] Response: ${response.status}`);
+
+  return response;
+}
+```
+
+### 8. 最佳实践
+
+1. **保持轻量**: 中间件会在每个请求上运行，避免重型操作
+2. **早期返回**: 对不需要处理的路径尽早返回
+3. **错误处理**: 始终包含适当的错误处理逻辑
+4. **匹配器优化**: 使用精确的匹配器避免不必要的执行
+5. **环境变量**: 敏感配置使用环境变量
+6. **测试**: 编写测试确保中间件逻辑正确
+
+### 9. 与其他功能集成
+
+#### 9.1 与 App Router 集成
+
+```typescript
+// middleware.ts
+export function middleware(request: NextRequest) {
+  // 为 App Router 添加自定义头
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+
+  return NextResponse.next({
+    request: { headers: requestHeaders }
+  });
+}
+
+// app/dashboard/page.tsx
+import { headers } from "next/headers";
+
+export default function Dashboard() {
+  const headersList = headers();
+  const pathname = headersList.get("x-pathname");
+
+  return <div>Current path: {pathname}</div>;
+}
+```
+
+#### 9.2 与 API Routes 集成
+
+```typescript
+// middleware.ts
+export function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    const response = NextResponse.next();
+    response.headers.set("x-api-version", "1.0");
+    return response;
+  }
+
+  return NextResponse.next();
+}
+
+// app/api/users/route.ts
+import { headers } from "next/headers";
+
+export async function GET() {
+  const headersList = headers();
+  const apiVersion = headersList.get("x-api-version");
+
+  return Response.json({ version: apiVersion });
+}
+```
+
+中间件是 Next.js 中强大的功能，合理使用可以实现认证、国际化、限流等多种功能，提升应用的安全性和用户体验。

@@ -65,7 +65,10 @@ export default defineConfig({
           },
           {
             text: "三、Next",
-            items: [{ text: "基础使用", link: "src-pages/oyy-md/next/base" }]
+            items: [
+              { text: "基础使用", link: "src-pages/oyy-md/next/base" },
+              { text: "核心概念", link: "src-pages/oyy-md/next/core" }
+            ]
           }
         ]
       }

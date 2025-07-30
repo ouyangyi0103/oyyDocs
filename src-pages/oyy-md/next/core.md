@@ -1989,3 +1989,1277 @@ export const revalidate = 3600;
 3. **监控缓存性能**：确保缓存策略的有效性
 4. **优化缓存边界**：避免过度缓存或缓存不足
 5. **提供降级方案**：处理缓存失效的情况
+
+## 五、缓存类型
+
+Next.js 提供了多种缓存机制来优化应用性能。理解这些不同类型的缓存以及它们的使用场景对于构建高性能的 Web 应用至关重要。
+
+### 1. 缓存层次结构
+
+Next.js 的缓存系统是分层的，从最接近用户的缓存到服务端缓存：
+
+```
+用户浏览器
+    ↓
+CDN/边缘缓存
+    ↓
+Next.js 路由缓存
+    ↓
+Next.js 数据缓存
+    ↓
+数据库/API
+```
+
+### 2. 请求记忆化（Request Memoization）
+
+`React`拓展了`fetch API`以自动记住具有相同`URL`和选项的请求，这意味着你可以在 React 组件树中的多个位置为相同的数据调用`fetch`函数，而只执行一次请求。
+比如你需要在一条路由中使用相同的数据，就不需要在树的顶部获取数据，并在组件之间转发 props，相反，可以在需要获取数据的组件中直接使用`fetch`请求去获取数据，而不需要担心
+通过网络请求对相同数据发出多个请求会对性能有影响。
+
+**注意:**`请求记忆`是 React 的一个功能，并不是 nextjs 的功能，并且记忆化仅使用于`fetch`请求中的`GET`方法
+
+#### 工作原理
+
+```tsx
+// lib/api.ts
+async function fetchUser(id: string) {
+  console.log(`Fetching user ${id}`); // 在单个请求中只会打印一次
+
+  const response = await fetch(`https://api.example.com/users/${id}`);
+  return response.json();
+}
+
+// app/profile/[id]/page.tsx
+export default async function ProfilePage({ params }: { params: { id: string } }) {
+  // 这些调用会被记忆化，实际只发送一次请求
+  const user1 = await fetchUser(params.id);
+  const user2 = await fetchUser(params.id);
+  const user3 = await fetchUser(params.id);
+
+  return (
+    <div>
+      <h1>{user1.name}</h1>
+      <p>Email: {user2.email}</p>
+      <p>Role: {user3.role}</p>
+    </div>
+  );
+}
+```
+
+#### 手动记忆化控制
+
+```tsx
+// lib/memoization.ts
+import { cache } from "react";
+
+// 使用 React cache 手动控制记忆化
+export const getUser = cache(async (id: string) => {
+  console.log(`Fetching user ${id}`);
+
+  const response = await fetch(`https://api.example.com/users/${id}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch user");
+  }
+  return response.json();
+});
+
+export const getUserPosts = cache(async (userId: string) => {
+  console.log(`Fetching posts for user ${userId}`);
+
+  const response = await fetch(`https://api.example.com/users/${userId}/posts`);
+  return response.json();
+});
+```
+
+#### 记忆化的作用域
+
+```tsx
+// components/UserProfile.tsx
+import { getUser } from "@/lib/memoization";
+
+export async function UserProfile({ userId }: { userId: string }) {
+  const user = await getUser(userId); // 第一次调用
+
+  return (
+    <div className="bg-white p-4 rounded-lg shadow">
+      <h2 className="text-xl font-bold">{user.name}</h2>
+      <UserStats userId={userId} />
+      <UserActivity userId={userId} />
+    </div>
+  );
+}
+
+async function UserStats({ userId }: { userId: string }) {
+  const user = await getUser(userId); // 复用记忆化结果
+
+  return (
+    <div className="mt-4">
+      <p>Posts: {user.postsCount}</p>
+      <p>Followers: {user.followersCount}</p>
+    </div>
+  );
+}
+
+async function UserActivity({ userId }: { userId: string }) {
+  const user = await getUser(userId); // 复用记忆化结果
+
+  return (
+    <div className="mt-4">
+      <p>Last active: {user.lastActiveAt}</p>
+      <p>Join date: {user.createdAt}</p>
+    </div>
+  );
+}
+```
+
+#### 退出缓存记忆
+
+有时候我们需要退出请求记忆化，确保每次都发起新的请求。Next.js 和 React 提供了几种方式来实现这一点。
+
+##### 使用 AbortController 退出记忆化
+
+```tsx
+// lib/api-no-memo.ts
+// 每次调用都会发起新的请求
+export async function fetchUserWithoutMemo(id: string) {
+  // 创建新的 AbortController 确保每次请求都是独立的
+  const controller = new AbortController();
+
+  const response = await fetch(`https://api.example.com/users/${id}`, {
+    signal: controller.signal,
+    // 添加随机参数确保 URL 不同
+    cache: "no-store"
+  });
+
+  return response.json();
+}
+
+// app/user/[id]/page.tsx
+export default async function UserPage({ params }: { params: { id: string } }) {
+  // 这些调用不会被记忆化，每次都会发起新请求
+  const user1 = await fetchUserWithoutMemo(params.id);
+  const user2 = await fetchUserWithoutMemo(params.id);
+
+  console.log("两次请求的时间戳是否相同:", user1.timestamp === user2.timestamp); // false
+
+  return (
+    <div>
+      <h1>用户信息</h1>
+      <p>第一次请求时间: {user1.timestamp}</p>
+      <p>第二次请求时间: {user2.timestamp}</p>
+    </div>
+  );
+}
+```
+
+##### 使用 cache: 'no-store' 选项
+
+```tsx
+// lib/real-time-data.ts
+// 实时数据获取，不使用缓存记忆
+export async function getCurrentPrice(symbol: string) {
+  const response = await fetch(`https://api.stock.com/price/${symbol}`, {
+    cache: "no-store", // 禁用所有缓存包括记忆化
+    headers: {
+      "Cache-Control": "no-cache"
+    }
+  });
+
+  return response.json();
+}
+
+export async function getServerTime() {
+  const response = await fetch("https://api.time.com/now", {
+    cache: "no-store"
+  });
+
+  return response.json();
+}
+
+// app/trading/page.tsx
+export default async function TradingPage() {
+  // 每次调用都获取最新数据
+  const [price1, price2, time1, time2] = await Promise.all([
+    getCurrentPrice("AAPL"),
+    getCurrentPrice("AAPL"), // 不会复用第一次的结果
+    getServerTime(),
+    getServerTime() // 不会复用第一次的结果
+  ]);
+
+  return (
+    <div>
+      <h1>实时交易数据</h1>
+      <p>
+        第一次价格查询: ${price1.price} (时间: {price1.timestamp})
+      </p>
+      <p>
+        第二次价格查询: ${price2.price} (时间: {price2.timestamp})
+      </p>
+      <p>第一次服务器时间: {time1.time}</p>
+      <p>第二次服务器时间: {time2.time}</p>
+    </div>
+  );
+}
+```
+
+##### 添加唯一参数退出记忆化
+
+```tsx
+// lib/dynamic-fetch.ts
+// 通过添加时间戳或随机数确保 URL 唯一
+export async function fetchWithTimestamp(url: string) {
+  const timestampedUrl = `${url}?_t=${Date.now()}`;
+
+  const response = await fetch(timestampedUrl);
+  return response.json();
+}
+
+export async function fetchWithRandom(url: string) {
+  const randomUrl = `${url}?_r=${Math.random()}`;
+
+  const response = await fetch(randomUrl);
+  return response.json();
+}
+
+// 使用示例
+export default async function DynamicDataPage() {
+  // 这些请求不会被记忆化，因为 URL 每次都不同
+  const data1 = await fetchWithTimestamp("https://api.example.com/data");
+  const data2 = await fetchWithTimestamp("https://api.example.com/data");
+
+  const random1 = await fetchWithRandom("https://api.example.com/random");
+  const random2 = await fetchWithRandom("https://api.example.com/random");
+
+  return (
+    <div>
+      <h1>动态数据</h1>
+      <p>时间戳数据1: {JSON.stringify(data1)}</p>
+      <p>时间戳数据2: {JSON.stringify(data2)}</p>
+      <p>随机数据1: {JSON.stringify(random1)}</p>
+      <p>随机数据2: {JSON.stringify(random2)}</p>
+    </div>
+  );
+}
+```
+
+##### 使用不同的请求选项
+
+```tsx
+// lib/varied-requests.ts
+// 通过改变请求选项来避免记忆化
+export async function fetchUserWithDifferentHeaders(id: string, requestId: string) {
+  const response = await fetch(`https://api.example.com/users/${id}`, {
+    headers: {
+      "X-Request-ID": requestId, // 每次使用不同的请求ID
+      "Content-Type": "application/json"
+    }
+  });
+
+  return response.json();
+}
+
+export async function fetchWithDifferentMethods(url: string) {
+  // GET 请求（会被记忆化）
+  const getResponse = await fetch(url, { method: "GET" });
+
+  // POST 请求（不会被记忆化，因为记忆化只适用于 GET）
+  const postResponse = await fetch(url, {
+    method: "POST",
+    body: JSON.stringify({ timestamp: Date.now() })
+  });
+
+  return {
+    getData: await getResponse.json(),
+    postData: await postResponse.json()
+  };
+}
+
+// app/varied-requests/page.tsx
+export default async function VariedRequestsPage() {
+  // 使用不同的请求ID，避免记忆化
+  const user1 = await fetchUserWithDifferentHeaders("123", "req-001");
+  const user2 = await fetchUserWithDifferentHeaders("123", "req-002");
+
+  // GET 会被记忆化，POST 不会
+  const methodData = await fetchWithDifferentMethods("https://api.example.com/test");
+
+  return (
+    <div>
+      <h1>不同请求选项</h1>
+      <p>用户数据1: {JSON.stringify(user1)}</p>
+      <p>用户数据2: {JSON.stringify(user2)}</p>
+      <p>方法测试: {JSON.stringify(methodData)}</p>
+    </div>
+  );
+}
+```
+
+##### 在客户端组件中退出记忆化
+
+```tsx
+// components/ClientFetch.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+
+export default function ClientFetch() {
+  const [data, setData] = useState(null);
+  const [requestCount, setRequestCount] = useState(0);
+
+  // 客户端 fetch 不受服务端记忆化影响
+  const fetchData = async () => {
+    const response = await fetch("/api/current-time", {
+      cache: "no-store" // 确保不使用浏览器缓存
+    });
+    const result = await response.json();
+    setData(result);
+    setRequestCount(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return (
+    <div className="p-4 border rounded">
+      <h3>客户端数据获取</h3>
+      <p>请求次数: {requestCount}</p>
+      <p>当前时间: {data?.time}</p>
+      <button onClick={fetchData} className="mt-2 px-4 py-2 bg-blue-500 text-white rounded">
+        重新获取数据
+      </button>
+    </div>
+  );
+}
+```
+
+##### 条件性退出记忆化
+
+```tsx
+// lib/conditional-memo.ts
+export async function fetchUserConditionally(id: string, forceRefresh: boolean = false) {
+  const url = "https://api.example.com/users/" + id;
+
+  if (forceRefresh) {
+    // 强制刷新时退出记忆化
+    return fetch(url, {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache"
+      }
+    }).then(res => res.json());
+  } else {
+    // 正常情况使用记忆化
+    return fetch(url).then(res => res.json());
+  }
+}
+
+// app/conditional/page.tsx
+export default async function ConditionalPage({ searchParams }: { searchParams: { refresh?: string } }) {
+  const forceRefresh = searchParams.refresh === "true";
+
+  // 根据查询参数决定是否使用记忆化
+  const user = await fetchUserConditionally("123", forceRefresh);
+
+  return (
+    <div>
+      <h1>条件性记忆化</h1>
+      <p>强制刷新: {forceRefresh ? "是" : "否"}</p>
+      <p>用户数据: {JSON.stringify(user)}</p>
+      <div className="mt-4 space-x-2">
+        <a href="/conditional" className="px-4 py-2 bg-blue-500 text-white rounded">
+          使用缓存
+        </a>
+        <a href="/conditional?refresh=true" className="px-4 py-2 bg-red-500 text-white rounded">
+          强制刷新
+        </a>
+      </div>
+    </div>
+  );
+}
+```
+
+##### 使用自定义缓存键避免记忆化冲突
+
+```tsx
+// lib/custom-cache-keys.ts
+// 为不同的业务场景创建不同的请求
+export async function fetchUserForProfile(id: string) {
+  const response = await fetch(`https://api.example.com/users/${id}`, {
+    headers: {
+      "X-Context": "profile" // 上下文标识
+    }
+  });
+  return response.json();
+}
+
+export async function fetchUserForAdmin(id: string) {
+  const response = await fetch(`https://api.example.com/users/${id}`, {
+    headers: {
+      "X-Context": "admin" // 不同的上下文
+    }
+  });
+  return response.json();
+}
+
+// 使用环境变量或配置来区分请求
+export async function fetchWithEnvironment(endpoint: string) {
+  const response = await fetch(endpoint, {
+    headers: {
+      "X-Environment": process.env.NODE_ENV,
+      "X-Build-ID": process.env.BUILD_ID || "unknown"
+    }
+  });
+  return response.json();
+}
+```
+
+##### 记忆化调试和监控
+
+```tsx
+// lib/memo-debug.ts
+export function createTrackedFetch(name: string) {
+  const requestLog = new Map<string, number>();
+
+  return async function trackedFetch(url: string, options?: RequestInit) {
+    const key = `${url}-${JSON.stringify(options)}`;
+    const count = requestLog.get(key) || 0;
+    requestLog.set(key, count + 1);
+
+    console.log(`[${name}] Request #${count + 1} to: ${url}`);
+
+    if (count > 0) {
+      console.log(`[${name}] This request was memoized!`);
+    }
+
+    const response = await fetch(url, options);
+
+    console.log(`[${name}] Response received for: ${url}`);
+
+    return response;
+  };
+}
+
+// 使用示例
+const debugFetch = createTrackedFetch("UserService");
+
+export async function fetchUserWithTracking(id: string) {
+  const response = await debugFetch(`https://api.example.com/users/${id}`);
+  return response.json();
+}
+```
+
+##### 最佳实践总结
+
+```tsx
+// lib/memo-best-practices.ts
+export const MemoizationBestPractices = {
+  // 1. 明确什么时候需要退出记忆化
+  scenarios: {
+    realTimeData: "stock prices, live chat, current time",
+    userSpecificData: "personalized content that changes frequently",
+    debugging: "when testing or debugging cache behavior",
+    dataValidation: "when verifying data consistency"
+  },
+
+  // 2. 选择合适的退出方法
+  methods: {
+    noStore: 'cache: "no-store" - 完全禁用缓存',
+    uniqueUrl: "Add timestamp/random - URL 唯一化",
+    differentHeaders: "Different headers - 改变请求头",
+    postRequest: "POST method - 使用非 GET 方法"
+  },
+
+  // 3. 性能考虑
+  performanceNotes: [
+    "退出记忆化会增加网络请求数量",
+    "谨慎在性能敏感的路径中使用",
+    "考虑使用客户端状态管理作为替代",
+    "监控网络请求的数量和频率"
+  ],
+
+  // 4. 调试技巧
+  debugTips: [
+    "使用 console.log 追踪请求次数",
+    "检查 Network 面板确认请求行为",
+    "使用请求ID或时间戳标识不同请求",
+    "在开发环境启用详细日志"
+  ]
+};
+```
+
+通过这些方法，您可以根据具体需求灵活地控制请求记忆化的行为。选择合适的方法取决于您的具体用例：
+
+- **实时数据**：使用 `cache: 'no-store'`
+- **调试测试**：使用时间戳或随机参数
+- **不同上下文**：使用不同的请求头
+- **条件性控制**：根据参数动态决定是否使用记忆化
+
+记住，退出记忆化会增加网络请求的数量，因此要谨慎使用，确保在真正需要最新数据的场景中才禁用记忆化。
+
+### 3. 数据缓存（Data Cache）
+
+数据缓存是 Next.js 的持久化缓存层，用于缓存数据获取的结果。
+
+#### 使用 fetch 的数据缓存
+
+```tsx
+// app/products/page.tsx
+async function getProducts() {
+  // 默认情况下，fetch 请求会被缓存
+  const response = await fetch("https://api.example.com/products", {
+    next: {
+      revalidate: 3600, // 1小时后重新验证
+      tags: ["products"] // 缓存标签
+    }
+  });
+
+  return response.json();
+}
+
+async function getFeaturedProducts() {
+  // 永久缓存（直到手动重新验证）
+  const response = await fetch("https://api.example.com/products/featured", {
+    next: { tags: ["products", "featured"] }
+  });
+
+  return response.json();
+}
+
+async function getFlashSale() {
+  // 不缓存实时数据
+  const response = await fetch("https://api.example.com/flash-sale", {
+    cache: "no-store"
+  });
+
+  return response.json();
+}
+
+export default async function ProductsPage() {
+  const [products, featuredProducts, flashSale] = await Promise.all([
+    getProducts(),
+    getFeaturedProducts(),
+    getFlashSale()
+  ]);
+
+  return (
+    <div>
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">限时抢购</h2>
+        <FlashSaleComponent data={flashSale} />
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">精选产品</h2>
+        <ProductGrid products={featuredProducts} />
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-bold mb-4">全部产品</h2>
+        <ProductGrid products={products} />
+      </section>
+    </div>
+  );
+}
+```
+
+#### 使用 unstable_cache 进行更精细的控制
+
+```tsx
+// lib/cache.ts
+import { unstable_cache } from "next/cache";
+
+// 缓存数据库查询
+export const getCachedUser = unstable_cache(
+  async (id: string) => {
+    const user = await db.user.findUnique({
+      where: { id },
+      include: {
+        profile: true,
+        posts: {
+          take: 5,
+          orderBy: { createdAt: "desc" }
+        }
+      }
+    });
+    return user;
+  },
+  ["user"], // 缓存键前缀
+  {
+    revalidate: 300, // 5分钟
+    tags: ["user-data"]
+  }
+);
+
+// 缓存复杂计算
+export const getCachedAnalytics = unstable_cache(
+  async (userId: string, startDate: Date, endDate: Date) => {
+    // 模拟复杂的分析计算
+    const analytics = await performComplexAnalytics(userId, startDate, endDate);
+
+    return {
+      ...analytics,
+      generatedAt: new Date(),
+      cacheKey: `${userId}-${startDate.toISOString()}-${endDate.toISOString()}`
+    };
+  },
+  ["analytics"],
+  {
+    revalidate: 1800, // 30分钟
+    tags: ["analytics", "user-analytics"]
+  }
+);
+
+// 条件缓存
+export const getCachedContent = unstable_cache(
+  async (slug: string, preview = false) => {
+    if (preview) {
+      // 预览模式不使用缓存
+      return await getContentFromCMS(slug, true);
+    }
+
+    return await getContentFromCMS(slug, false);
+  },
+  ["content"],
+  {
+    revalidate: preview => (preview ? 0 : 3600), // 预览模式不缓存
+    tags: ["cms-content"]
+  }
+);
+```
+
+### 4. 完整路由缓存（Full Route Cache）
+
+完整路由缓存用于缓存整个路由的渲染结果。
+
+#### 静态路由缓存
+
+```tsx
+// app/about/page.tsx - 静态路由，构建时缓存
+export default function AboutPage() {
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">关于我们</h1>
+
+      <section className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">公司简介</h2>
+        <p className="text-gray-700 leading-relaxed">我们是一家专注于创新技术的公司，致力于为客户提供最优质的服务...</p>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">我们的使命</h2>
+        <p className="text-gray-700 leading-relaxed">通过技术创新，让世界变得更美好...</p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mb-4">联系方式</h2>
+        <div className="bg-gray-100 p-4 rounded-lg">
+          <p>邮箱: contact@example.com</p>
+          <p>电话: +86 123-4567-8900</p>
+          <p>地址: 北京市朝阳区科技园区</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// 这个页面在构建时生成，并被永久缓存
+```
+
+#### 动态路由的静态生成
+
+```tsx
+// app/blog/[slug]/page.tsx
+import { notFound } from "next/navigation";
+
+interface BlogPostProps {
+  params: { slug: string };
+}
+
+export default async function BlogPost({ params }: BlogPostProps) {
+  const post = await getPost(params.slug);
+
+  if (!post) {
+    notFound();
+  }
+
+  return (
+    <article className="max-w-4xl mx-auto p-6">
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
+        <div className="flex items-center gap-4 text-gray-600">
+          <span>作者: {post.author}</span>
+          <time>{new Date(post.publishedAt).toLocaleDateString()}</time>
+        </div>
+      </header>
+
+      <div className="prose max-w-none">
+        <div dangerouslySetInnerHTML={{ __html: post.content }} />
+      </div>
+    </article>
+  );
+}
+
+// 生成静态参数
+export async function generateStaticParams() {
+  const posts = await getAllPosts();
+
+  return posts.map(post => ({
+    slug: post.slug
+  }));
+}
+
+// 每24小时重新验证
+export const revalidate = 86400;
+```
+
+#### 动态路由缓存控制
+
+```tsx
+// app/dashboard/page.tsx - 动态路由
+import { getCurrentUser } from "@/lib/auth";
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser();
+  const stats = await getUserStats(user.id);
+
+  return (
+    <div>
+      <h1>欢迎回来, {user.name}!</h1>
+      <DashboardStats stats={stats} />
+      <RecentActivity userId={user.id} />
+    </div>
+  );
+}
+
+// 强制动态渲染（不缓存）
+export const dynamic = "force-dynamic";
+```
+
+### 5. 路由器缓存（Router Cache）
+
+路由器缓存是客户端缓存，用于缓存路由段的结果。
+
+#### 预取和缓存行为
+
+```tsx
+// components/Navigation.tsx
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+export default function Navigation() {
+  const router = useRouter();
+
+  return (
+    <nav className="bg-gray-800 text-white p-4">
+      <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <Link href="/" className="text-xl font-bold">
+          我的网站
+        </Link>
+
+        <div className="space-x-4">
+          {/* 静态路由会被预取和缓存 */}
+          <Link href="/about" className="hover:text-gray-300">
+            关于我们
+          </Link>
+
+          {/* 动态路由默认预取但不缓存服务端组件 */}
+          <Link href="/blog" className="hover:text-gray-300">
+            博客
+          </Link>
+
+          {/* 禁用预取 */}
+          <Link href="/admin" prefetch={false} className="hover:text-gray-300">
+            管理后台
+          </Link>
+
+          {/* 程序化导航 */}
+          <button onClick={() => router.push("/dashboard")} className="hover:text-gray-300">
+            仪表板
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+```
+
+#### 手动预取控制
+
+```tsx
+// components/ProductCard.tsx
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+}
+
+export default function ProductCard({ product }: { product: Product }) {
+  const router = useRouter();
+  const [isHovered, setIsHovered] = useState(false);
+
+  // 鼠标悬停时预取
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    router.prefetch(`/products/${product.id}`);
+  };
+
+  return (
+    <div
+      className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded mb-4" />
+
+      <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
+      <p className="text-2xl font-bold text-green-600 mb-4">¥{product.price}</p>
+
+      <Link
+        href={`/products/${product.id}`}
+        className={`block w-full bg-blue-500 text-white text-center py-2 rounded transition-colors ${
+          isHovered ? "bg-blue-600" : ""
+        }`}
+      >
+        查看详情
+      </Link>
+    </div>
+  );
+}
+```
+
+### 6. 缓存失效和清除
+
+#### 使用缓存标签进行精确失效
+
+```tsx
+// app/api/products/route.ts
+import { revalidateTag } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  try {
+    const productData = await request.json();
+
+    // 创建新产品
+    const newProduct = await createProduct(productData);
+
+    // 清除相关缓存
+    revalidateTag("products");
+    revalidateTag("featured-products");
+    revalidateTag(`category-${newProduct.categoryId}`);
+
+    return NextResponse.json({ success: true, product: newProduct });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { id, ...updateData } = await request.json();
+
+    // 更新产品
+    const updatedProduct = await updateProduct(id, updateData);
+
+    // 清除特定产品和相关缓存
+    revalidateTag("products");
+    revalidateTag(`product-${id}`);
+
+    return NextResponse.json({ success: true, product: updatedProduct });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
+  }
+}
+```
+
+#### 使用路径重新验证
+
+```tsx
+// app/api/cms/posts/route.ts
+import { revalidatePath } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  try {
+    const postData = await request.json();
+
+    // 创建新文章
+    const newPost = await createPost(postData);
+
+    // 重新验证相关路径
+    revalidatePath("/blog");
+    revalidatePath("/");
+    revalidatePath(`/blog/${newPost.slug}`);
+
+    // 如果文章属于特定分类，也重新验证分类页面
+    if (newPost.category) {
+      revalidatePath(`/blog/category/${newPost.category}`);
+    }
+
+    return NextResponse.json({ success: true, post: newPost });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const postId = searchParams.get("id");
+
+    if (!postId) {
+      return NextResponse.json({ error: "Post ID required" }, { status: 400 });
+    }
+
+    // 获取文章信息（用于清除特定缓存）
+    const post = await getPost(postId);
+
+    // 删除文章
+    await deletePost(postId);
+
+    // 清除相关缓存
+    revalidatePath("/blog");
+    revalidatePath("/");
+
+    if (post) {
+      revalidatePath(`/blog/${post.slug}`);
+      if (post.category) {
+        revalidatePath(`/blog/category/${post.category}`);
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to delete post" }, { status: 500 });
+  }
+}
+```
+
+### 7. 缓存配置和优化
+
+#### 全局缓存配置
+
+```tsx
+// next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    // 启用部分预渲染
+    ppr: true
+  },
+
+  // 缓存配置
+  cacheHandler: require.resolve("./cache-handler.js"),
+  cacheMaxMemorySize: 0, // 禁用默认内存缓存
+
+  // 自定义缓存头
+  async headers() {
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=300, stale-while-revalidate=60"
+          }
+        ]
+      },
+      {
+        source: "/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable"
+          }
+        ]
+      }
+    ];
+  }
+};
+
+module.exports = nextConfig;
+```
+
+#### 自定义缓存处理器
+
+```tsx
+// cache-handler.js
+const { CacheHandler } = require("@neshca/cache-handler");
+const createRedisHandler = require("@neshca/cache-handler/redis-strings").default;
+const createLruHandler = require("@neshca/cache-handler/local-lru").default;
+
+CacheHandler.onCreation(async () => {
+  let redisHandler;
+
+  if (process.env.REDIS_URL) {
+    redisHandler = await createRedisHandler({
+      url: process.env.REDIS_URL,
+      timeoutMs: 1000
+    });
+  }
+
+  const lruHandler = createLruHandler({
+    maxItems: 1000,
+    maxItemSizeBytes: 1024 * 1024 * 500 // 500MB
+  });
+
+  return {
+    handlers: [
+      // 优先使用 Redis，回退到 LRU
+      redisHandler,
+      lruHandler
+    ].filter(Boolean)
+  };
+});
+
+module.exports = CacheHandler;
+```
+
+### 8. 缓存监控和调试
+
+#### 缓存性能监控
+
+```tsx
+// lib/cache-monitor.ts
+interface CacheMetrics {
+  hits: number;
+  misses: number;
+  size: number;
+  hitRate: number;
+}
+
+class CacheMonitor {
+  private metrics: Map<string, CacheMetrics> = new Map();
+
+  recordHit(key: string) {
+    const metric = this.getOrCreateMetric(key);
+    metric.hits++;
+    this.updateHitRate(key);
+  }
+
+  recordMiss(key: string) {
+    const metric = this.getOrCreateMetric(key);
+    metric.misses++;
+    this.updateHitRate(key);
+  }
+
+  recordSize(key: string, size: number) {
+    const metric = this.getOrCreateMetric(key);
+    metric.size = size;
+  }
+
+  private getOrCreateMetric(key: string): CacheMetrics {
+    if (!this.metrics.has(key)) {
+      this.metrics.set(key, {
+        hits: 0,
+        misses: 0,
+        size: 0,
+        hitRate: 0
+      });
+    }
+    return this.metrics.get(key)!;
+  }
+
+  private updateHitRate(key: string) {
+    const metric = this.metrics.get(key)!;
+    const total = metric.hits + metric.misses;
+    metric.hitRate = total > 0 ? metric.hits / total : 0;
+  }
+
+  getMetrics(): Map<string, CacheMetrics> {
+    return new Map(this.metrics);
+  }
+
+  getReport(): string {
+    const entries = Array.from(this.metrics.entries());
+
+    let report = "Cache Performance Report\n";
+    report += "========================\n\n";
+
+    entries.forEach(([key, metrics]) => {
+      report += `${key}:\n`;
+      report += `  Hits: ${metrics.hits}\n`;
+      report += `  Misses: ${metrics.misses}\n`;
+      report += `  Hit Rate: ${(metrics.hitRate * 100).toFixed(2)}%\n`;
+      report += `  Size: ${metrics.size} bytes\n\n`;
+    });
+
+    return report;
+  }
+}
+
+export const cacheMonitor = new CacheMonitor();
+```
+
+#### 缓存调试工具
+
+```tsx
+// lib/cache-debug.ts
+export class CacheDebugger {
+  private static isEnabled = process.env.NODE_ENV === "development";
+
+  static log(operation: string, key: string, data?: any) {
+    if (!this.isEnabled) return;
+
+    console.group(`🔄 Cache ${operation}`);
+    console.log(`Key: ${key}`);
+    console.log(`Timestamp: ${new Date().toISOString()}`);
+
+    if (data) {
+      console.log("Data:", data);
+    }
+
+    console.groupEnd();
+  }
+
+  static logHit(key: string) {
+    this.log("HIT", key);
+  }
+
+  static logMiss(key: string) {
+    this.log("MISS", key);
+  }
+
+  static logSet(key: string, data: any) {
+    this.log("SET", key, { size: JSON.stringify(data).length });
+  }
+
+  static logInvalidate(key: string) {
+    this.log("INVALIDATE", key);
+  }
+
+  static async measureCachePerformance<T>(operation: string, fn: () => Promise<T>): Promise<T> {
+    if (!this.isEnabled) return fn();
+
+    const start = performance.now();
+    const result = await fn();
+    const duration = performance.now() - start;
+
+    console.log(`⏱️ Cache ${operation} took ${duration.toFixed(2)}ms`);
+
+    return result;
+  }
+}
+```
+
+### 9. 最佳实践总结
+
+#### 缓存策略选择指南
+
+```tsx
+// 缓存策略决策树
+export const CacheStrategy = {
+  // 静态内容 - 长期缓存
+  static: {
+    revalidate: 86400, // 24小时
+    tags: ["static-content"],
+    example: "关于我们页面、条款和条件"
+  },
+
+  // 半静态内容 - 中期缓存
+  semiStatic: {
+    revalidate: 3600, // 1小时
+    tags: ["semi-static"],
+    example: "产品列表、博客文章"
+  },
+
+  // 动态内容 - 短期缓存
+  dynamic: {
+    revalidate: 300, // 5分钟
+    tags: ["dynamic"],
+    example: "用户生成内容、评论"
+  },
+
+  // 实时内容 - 不缓存
+  realtime: {
+    cache: "no-store",
+    tags: [],
+    example: "库存状态、实时聊天"
+  },
+
+  // 用户特定 - 按用户缓存
+  userSpecific: {
+    revalidate: 600, // 10分钟
+    tags: ["user-data"],
+    example: "用户仪表板、个人设置"
+  }
+};
+```
+
+#### 缓存最佳实践
+
+```tsx
+// lib/cache-best-practices.ts
+export const CacheBestPractices = {
+  // 1. 使用有意义的缓存键
+  generateCacheKey(prefix: string, params: Record<string, any>): string {
+    const sortedParams = Object.keys(params)
+      .sort()
+      .map(key => `${key}:${params[key]}`)
+      .join("|");
+
+    return `${prefix}:${sortedParams}`;
+  },
+
+  // 2. 实现缓存降级策略
+  async withFallback<T>(cacheOperation: () => Promise<T>, fallbackOperation: () => Promise<T>): Promise<T> {
+    try {
+      return await cacheOperation();
+    } catch (error) {
+      console.warn("Cache operation failed, using fallback:", error);
+      return await fallbackOperation();
+    }
+  },
+
+  // 3. 批量缓存操作
+  async batchInvalidate(tags: string[]): Promise<void> {
+    const promises = tags.map(tag =>
+      // 模拟批量失效操作
+      this.invalidateTag(tag)
+    );
+
+    await Promise.all(promises);
+  },
+
+  // 4. 缓存预热
+  async warmupCache(keys: string[]): Promise<void> {
+    const warmupPromises = keys.map(async key => {
+      try {
+        await this.preloadCacheKey(key);
+      } catch (error) {
+        console.warn(`Failed to warm up cache for key: ${key}`, error);
+      }
+    });
+
+    await Promise.allSettled(warmupPromises);
+  },
+
+  // 模拟方法
+  async invalidateTag(tag: string): Promise<void> {
+    // 实际实现会调用 revalidateTag
+  },
+
+  async preloadCacheKey(key: string): Promise<void> {
+    // 实际实现会预加载特定缓存键
+  }
+};
+```
+
+Next.js 的缓存系统是一个强大且复杂的性能优化工具。通过理解不同类型的缓存及其适用场景，我们可以：
+
+1. **提高应用性能** - 减少不必要的计算和网络请求
+2. **改善用户体验** - 更快的页面加载和导航
+3. **降低服务器负载** - 减少对后端服务的压力
+4. **优化成本** - 减少计算资源和带宽使用
+
+关键是要根据数据的特性和业务需求选择合适的缓存策略，并建立有效的缓存失效机制来保证数据的准确性。

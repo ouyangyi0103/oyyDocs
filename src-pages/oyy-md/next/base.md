@@ -924,3 +924,1052 @@ export default function CartPage() {
 3. **SEO 考虑**: 拦截路由不会影响 SEO，因为原始页面仍然存在
 4. **错误处理**: 为拦截的内容提供适当的错误边界和加载状态
 5. **性能优化**: 考虑对拦截的内容进行预加载以提升用户体验
+
+## 十四、路由处理程序(也就是后端接口)
+
+路由处理程序允许您使用 Web 请求和响应 API 为给定的路由创建自定义请求处理程序，路由处理程序在应用程序目录中的`route.ts`文件中定义，
+路由处理程序可以嵌套在`app`目录内的任何位置，类似于`page.tsx`和`layout.tsx`文件，但是不能有于`page.tsx`和`layout.tsx`文件同级`route.tsx`文件，
+
+### 1.基本路由处理程序示例
+
+```tsx
+// app/api/hello/route.ts
+export async function GET() {
+  return Response.json({ message: "Hello World" });
+}
+
+export async function POST() {
+  return Response.json({ message: "Created" });
+}
+
+export async function PUT() {
+  return Response.json({ message: "Updated" });
+}
+
+export async function DELETE() {
+  return Response.json({ message: "Deleted" });
+}
+```
+
+### 2.支持的 HTTP 方法
+
+路由处理程序支持以下 HTTP 方法：`GET`、`POST`、`PUT`、`PATCH`、`DELETE`、`HEAD`、`OPTIONS`
+
+```
+├── app/
+│   ├── layout.tsx              # 根布局
+│   ├── page.tsx                # 首页 (/)
+│   │
+│   ├── api/users/route.ts        # 用户路由处理程序
+│   ├── api/users/[id]/route.ts  # 用户详情路由处理程序
+│   │
+│   ├── api/posts/route.ts        # 帖子路由处理程序
+│   ├── api/posts/[id]/route.ts  # 帖子详情路由处理程序
+│   │
+│   ├── api/comments/route.ts    # 评论路由处理程序
+│   │
+│   └── api/auth/route.ts        # 认证路由处理程序
+│
+```
+
+```tsx
+// app/api/users/route.ts
+export async function GET() {
+  // 获取用户列表
+  return Response.json({ users: [] });
+}
+
+export async function POST(request: Request) {
+  // 创建新用户
+  const body = await request.json();
+  return Response.json({ user: body }, { status: 201 });
+}
+
+export async function PATCH(request: Request) {
+  // 更新用户
+  const body = await request.json();
+  return Response.json({ user: body });
+}
+
+export async function DELETE() {
+  // 删除用户  /api/users/:id
+  return Response.json({ message: "User deleted" });
+}
+```
+
+### 3.请求对象
+
+```tsx
+// app/api/search/route.ts
+export async function GET(request: Request) {
+  // 获取URL参数
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q");
+  const page = searchParams.get("page") || "1";
+
+  // 获取请求头
+  const userAgent = request.headers.get("user-agent");
+
+  return Response.json({
+    query,
+    page: parseInt(page),
+    userAgent
+  });
+}
+
+export async function POST(request: Request) {
+  // 获取请求体
+  const body = await request.json();
+
+  // 获取请求头
+  const contentType = request.headers.get("content-type");
+
+  return Response.json({
+    received: body,
+    contentType
+  });
+}
+```
+
+### 4.动态路由处理程序
+
+```tsx
+// app/api/users/[id]/route.ts
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const id = params.id;
+
+  // 模拟获取用户数据
+  const user = {
+    id,
+    name: `User ${id}`,
+    email: `user${id}@example.com`
+  };
+
+  return Response.json({ user });
+}
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  const id = params.id;
+  const body = await request.json();
+
+  // 模拟更新用户
+  const updatedUser = {
+    id,
+    ...body,
+    updatedAt: new Date().toISOString()
+  };
+
+  return Response.json({ user: updatedUser });
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const id = params.id;
+
+  // 模拟删除用户
+  return Response.json({
+    message: `User ${id} deleted successfully`
+  });
+}
+```
+
+### 5.嵌套动态路由
+
+```tsx
+// app/api/users/[userId]/posts/[postId]/route.ts
+export async function GET(request: Request, { params }: { params: { userId: string; postId: string } }) {
+  const { userId, postId } = params;
+
+  // 模拟获取特定用户的特定文章
+  const post = {
+    id: postId,
+    userId,
+    title: `Post ${postId} by User ${userId}`,
+    content: "这是文章内容..."
+  };
+
+  return Response.json({ post });
+}
+```
+
+### 6.错误处理
+
+```tsx
+// app/api/users/[id]/route.ts
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const id = params.id;
+
+    // 验证ID格式
+    if (!id || isNaN(parseInt(id))) {
+      return Response.json({ error: "Invalid user ID" }, { status: 400 });
+    }
+
+    // 模拟数据库查询
+    const user = await getUserById(id);
+
+    if (!user) {
+      return Response.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return Response.json({ user });
+  } catch (error) {
+    console.error("API Error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+async function getUserById(id: string) {
+  // 模拟数据库操作
+  if (id === "999") {
+    throw new Error("Database connection failed");
+  }
+
+  if (parseInt(id) > 100) {
+    return null; // 用户不存在
+  }
+
+  return {
+    id,
+    name: `User ${id}`,
+    email: `user${id}@example.com`
+  };
+}
+```
+
+### 7.中间件和认证
+
+```tsx
+// app/api/protected/route.ts
+import { headers } from "next/headers";
+
+export async function GET() {
+  // 获取请求头
+  const headersList = headers();
+  const authorization = headersList.get("authorization");
+
+  // 检查认证
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const token = authorization.split(" ")[1];
+
+  // 验证token
+  if (!isValidToken(token)) {
+    return Response.json({ error: "Invalid token" }, { status: 401 });
+  }
+
+  // 返回受保护的数据
+  return Response.json({
+    message: "This is protected data",
+    user: await getUserFromToken(token)
+  });
+}
+
+function isValidToken(token: string): boolean {
+  // 模拟token验证
+  return token === "valid-token-123";
+}
+
+async function getUserFromToken(token: string) {
+  // 模拟从token获取用户信息
+  return {
+    id: "1",
+    name: "John Doe",
+    email: "john@example.com"
+  };
+}
+```
+
+### 8.处理表单数据
+
+```tsx
+// app/api/upload/route.ts
+export async function POST(request: Request) {
+  try {
+    // 处理FormData
+    const formData = await request.formData();
+
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const file = formData.get("file") as File;
+
+    // 验证数据
+    if (!name || !email) {
+      return Response.json({ error: "Name and email are required" }, { status: 400 });
+    }
+
+    // 处理文件上传
+    if (file) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      // 这里可以保存文件到磁盘或云存储
+      console.log(`File uploaded: ${file.name}, Size: ${buffer.length} bytes`);
+    }
+
+    // 保存用户数据
+    const user = {
+      id: Date.now().toString(),
+      name,
+      email,
+      fileName: file?.name || null
+    };
+
+    return Response.json(
+      {
+        message: "User created successfully",
+        user
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Upload error:", error);
+    return Response.json({ error: "Upload failed" }, { status: 500 });
+  }
+}
+```
+
+### 9.设置响应头和 Cookie
+
+```tsx
+// app/api/auth/login/route.ts
+export async function POST(request: Request) {
+  try {
+    const { email, password } = await request.json();
+
+    // 验证用户凭据
+    const user = await authenticateUser(email, password);
+
+    if (!user) {
+      return Response.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // 生成JWT token
+    const token = generateJWT(user);
+
+    // 创建响应
+    const response = Response.json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }
+    });
+
+    // 设置Cookie
+    response.headers.set("Set-Cookie", `token=${token}; HttpOnly; Path=/; Max-Age=86400`);
+
+    // 设置自定义响应头
+    response.headers.set("X-User-ID", user.id);
+
+    return response;
+  } catch (error) {
+    return Response.json({ error: "Login failed" }, { status: 500 });
+  }
+}
+
+async function authenticateUser(email: string, password: string) {
+  // 模拟用户认证
+  if (email === "admin@example.com" && password === "password123") {
+    return {
+      id: "1",
+      name: "Admin User",
+      email: "admin@example.com"
+    };
+  }
+  return null;
+}
+
+function generateJWT(user: any): string {
+  // 模拟JWT生成
+  return `jwt-token-for-${user.id}`;
+}
+```
+
+### 10.CORS 处理
+
+```tsx
+// app/api/public/route.ts
+export async function GET() {
+  const response = Response.json({
+    message: "This API supports CORS"
+  });
+
+  // 设置CORS头
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  return response;
+}
+
+export async function OPTIONS() {
+  // 处理预检请求
+  return new Response(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    }
+  });
+}
+```
+
+### 11.流式响应
+
+```tsx
+// app/api/stream/route.ts
+export async function GET() {
+  // 创建可读流
+  const stream = new ReadableStream({
+    start(controller) {
+      let count = 0;
+
+      const interval = setInterval(() => {
+        count++;
+
+        // 发送数据块
+        controller.enqueue(`data: Message ${count}\n\n`);
+
+        // 5条消息后结束
+        if (count >= 5) {
+          clearInterval(interval);
+          controller.close();
+        }
+      }, 1000);
+    }
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain",
+      "Transfer-Encoding": "chunked"
+    }
+  });
+}
+```
+
+### 12.完整的 API 示例：用户管理
+
+```tsx
+// app/api/users/route.ts
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 模拟数据库
+let users: User[] = [
+  {
+    id: "1",
+    name: "John Doe",
+    email: "john@example.com",
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z"
+  }
+];
+
+// 获取所有用户
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const search = searchParams.get("search") || "";
+
+    // 过滤用户
+    let filteredUsers = users;
+    if (search) {
+      filteredUsers = users.filter(
+        user =>
+          user.name.toLowerCase().includes(search.toLowerCase()) ||
+          user.email.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    // 分页
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+    return Response.json({
+      users: paginatedUsers,
+      pagination: {
+        page,
+        limit,
+        total: filteredUsers.length,
+        totalPages: Math.ceil(filteredUsers.length / limit)
+      }
+    });
+  } catch (error) {
+    return Response.json({ error: "Failed to fetch users" }, { status: 500 });
+  }
+}
+
+// 创建新用户
+export async function POST(request: Request) {
+  try {
+    const { name, email } = await request.json();
+
+    // 验证输入
+    if (!name || !email) {
+      return Response.json({ error: "Name and email are required" }, { status: 400 });
+    }
+
+    // 检查邮箱是否已存在
+    const existingUser = users.find(user => user.email === email);
+    if (existingUser) {
+      return Response.json({ error: "Email already exists" }, { status: 409 });
+    }
+
+    // 创建新用户
+    const newUser: User = {
+      id: Date.now().toString(),
+      name,
+      email,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    users.push(newUser);
+
+    return Response.json({ user: newUser }, { status: 201 });
+  } catch (error) {
+    return Response.json({ error: "Failed to create user" }, { status: 500 });
+  }
+}
+```
+
+### 13.路由处理程序的特点
+
+1. **文件约定**: 必须命名为 `route.ts` 或 `route.js`
+2. **HTTP 方法**: 支持所有标准 HTTP 方法
+3. **类型安全**: 支持 TypeScript 类型定义
+4. **中间件**: 可以集成 Next.js 中间件
+5. **静态生成**: GET 请求默认为静态生成，可以配置为动态
+6. **边缘运行时**: 支持 Edge Runtime
+
+### 14.路由处理程序 vs API Routes
+
+- **位置**: 路由处理程序在 `app` 目录中，API Routes 在 `pages/api` 目录中
+- **文件名**: 路由处理程序使用 `route.ts`，API Routes 使用任意文件名
+- **请求处理**: 路由处理程序使用标准 Web API，API Routes 使用 Next.js 特定 API
+- **性能**: 路由处理程序性能更好，支持流式响应
+
+### 15.最佳实践
+
+1. **错误处理**: 始终包含适当的错误处理
+2. **输入验证**: 验证所有输入数据
+3. **状态码**: 使用正确的 HTTP 状态码
+4. **安全性**: 实现认证和授权
+5. **日志记录**: 记录重要操作和错误
+6. **响应格式**: 保持一致的 API 响应格式
+7. **性能优化**: 使用适当的缓存策略
+
+## 十五、GET 缓存问题及解决
+
+在 Next.js App Router 中，GET 请求默认会被缓存，这可能会导致一些意外的行为。了解缓存机制并知道如何控制它对于构建动态应用程序至关重要。
+
+### 1.默认缓存行为
+
+```tsx
+// app/api/time/route.ts
+export async function GET() {
+  return Response.json({
+    time: new Date().toISOString(),
+    timestamp: Date.now()
+  });
+}
+```
+
+上述代码在生产环境中会被缓存，每次请求返回的时间都是相同的。
+
+### 2.缓存问题示例
+
+```tsx
+// app/api/user-count/route.ts - 有缓存问题的版本
+export async function GET() {
+  // 模拟获取用户数量
+  const userCount = await getUserCount();
+
+  return Response.json({
+    count: userCount,
+    timestamp: new Date().toISOString()
+  });
+}
+
+async function getUserCount() {
+  // 模拟数据库查询
+  return Math.floor(Math.random() * 1000) + 1;
+}
+```
+
+### 3.禁用缓存的方法
+
+#### 3.1 使用 dynamic 配置
+
+```tsx
+// app/api/current-time/route.ts
+export const dynamic = "force-dynamic"; // 强制动态渲染
+
+export async function GET() {
+  return Response.json({
+    time: new Date().toISOString(),
+    timestamp: Date.now(),
+    message: "这个API永远不会被缓存"
+  });
+}
+```
+
+#### 3.2 使用 revalidate 配置
+
+```tsx
+// app/api/news/route.ts
+export const revalidate = 60; // 每60秒重新验证缓存
+
+export async function GET() {
+  // 模拟获取新闻数据
+  const news = await fetchLatestNews();
+
+  return Response.json({
+    news,
+    fetchTime: new Date().toISOString()
+  });
+}
+
+async function fetchLatestNews() {
+  return [
+    { id: 1, title: "最新新闻1", time: new Date().toISOString() },
+    { id: 2, title: "最新新闻2", time: new Date().toISOString() }
+  ];
+}
+```
+
+#### 3.3 使用请求对象访问动态数据
+
+就是将 Request 对象与 GET 方法一起使用，这样每次请求都会重新获取数据，不会缓存
+
+```tsx
+// app/api/user-info/route.ts
+export async function GET(request: NextRequest) {
+  // 访问URL参数会自动禁用缓存
+  const { searchParams } = request.nextUrl;
+  const userId = searchParams.get("id");
+
+  // 访问请求头也会禁用缓存
+  const userAgent = request.headers.get("user-agent");
+
+  return NextResponse.json({
+    userId,
+    userAgent,
+    timestamp: new Date().toISOString(),
+    message: "由于访问了动态数据，此API不会被缓存"
+  });
+}
+```
+
+#### 3.4 使用 headers() 或 cookies() 函数
+
+```tsx
+// app/api/auth-status/route.ts
+import { headers, cookies } from "next/headers";
+
+export async function GET() {
+  // 访问headers会自动禁用缓存
+  const headersList = headers();
+  const authorization = headersList.get("authorization");
+
+  // 访问cookies也会自动禁用缓存
+  const cookieStore = cookies();
+  const sessionId = cookieStore.get("sessionId");
+
+  return Response.json({
+    isAuthenticated: !!authorization,
+    sessionId: sessionId?.value,
+    timestamp: new Date().toISOString()
+  });
+}
+```
+
+### 4.缓存配置选项
+
+```tsx
+// app/api/products/route.ts
+
+// 强制动态渲染（不缓存）
+export const dynamic = "force-dynamic";
+
+// 或者设置重新验证时间（以秒为单位）
+export const revalidate = 300; // 5分钟后重新验证
+
+// 或者强制静态渲染（强制缓存）
+export const dynamic = "force-static";
+
+export async function GET() {
+  const products = await getProducts();
+
+  return Response.json({
+    products,
+    fetchTime: new Date().toISOString()
+  });
+}
+
+async function getProducts() {
+  // 模拟数据库查询
+  return [
+    { id: 1, name: "产品A", price: 99.99 },
+    { id: 2, name: "产品B", price: 149.99 }
+  ];
+}
+```
+
+### 5.根据条件控制缓存
+
+```tsx
+// app/api/data/route.ts
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const fresh = searchParams.get("fresh");
+
+  // 如果请求包含 fresh 参数，返回动态数据
+  if (fresh === "true") {
+    return Response.json({
+      data: await getDynamicData(),
+      cached: false,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // 否则返回可缓存的数据
+  return Response.json(
+    {
+      data: await getStaticData(),
+      cached: true,
+      timestamp: new Date().toISOString()
+    },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=3600" // 1小时缓存
+      }
+    }
+  );
+}
+
+async function getDynamicData() {
+  return {
+    value: Math.random(),
+    type: "dynamic"
+  };
+}
+
+async function getStaticData() {
+  return {
+    value: "static-value",
+    type: "static"
+  };
+}
+```
+
+### 6.使用缓存标签进行细粒度控制
+
+```tsx
+// app/api/posts/route.ts
+import { unstable_cache } from "next/cache";
+
+// 使用缓存标签
+const getCachedPosts = unstable_cache(
+  async () => {
+    return await fetchPostsFromDB();
+  },
+  ["posts"], // 缓存键
+  {
+    tags: ["posts"], // 缓存标签
+    revalidate: 3600 // 1小时
+  }
+);
+
+export async function GET() {
+  const posts = await getCachedPosts();
+
+  return Response.json({
+    posts,
+    cachedAt: new Date().toISOString()
+  });
+}
+
+// 在其他地方可以通过标签清除缓存
+// revalidateTag('posts');
+
+async function fetchPostsFromDB() {
+  // 模拟数据库查询
+  return [
+    { id: 1, title: "文章1", content: "内容1" },
+    { id: 2, title: "文章2", content: "内容2" }
+  ];
+}
+```
+
+### 7.客户端缓存控制
+
+```tsx
+// app/api/volatile-data/route.ts
+export async function GET() {
+  const data = await getVolatileData();
+
+  return Response.json(data, {
+    headers: {
+      // 禁用所有缓存
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0"
+    }
+  });
+}
+
+// 或者设置特定的缓存策略
+export async function GET() {
+  const data = await getData();
+
+  return Response.json(data, {
+    headers: {
+      // 缓存5分钟，但允许陈旧内容
+      "Cache-Control": "public, max-age=300, stale-while-revalidate=60"
+    }
+  });
+}
+
+async function getVolatileData() {
+  return {
+    value: Math.random(),
+    timestamp: Date.now()
+  };
+}
+
+async function getData() {
+  return {
+    value: "some data",
+    timestamp: Date.now()
+  };
+}
+```
+
+### 8.实际应用示例：用户统计 API
+
+```tsx
+// app/api/stats/route.ts
+import { headers } from "next/headers";
+
+// 根据是否为管理员决定缓存策略
+export async function GET() {
+  const headersList = headers();
+  const authorization = headersList.get("authorization");
+  const isAdmin = checkIfAdmin(authorization);
+
+  if (isAdmin) {
+    // 管理员总是获取最新数据
+    return Response.json(
+      {
+        stats: await getRealTimeStats(),
+        realTime: true,
+        timestamp: new Date().toISOString()
+      },
+      {
+        headers: {
+          "Cache-Control": "no-cache"
+        }
+      }
+    );
+  } else {
+    // 普通用户获取缓存数据
+    return Response.json(
+      {
+        stats: await getCachedStats(),
+        realTime: false,
+        timestamp: new Date().toISOString()
+      },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=300" // 5分钟缓存
+        }
+      }
+    );
+  }
+}
+
+function checkIfAdmin(authorization: string | null): boolean {
+  // 模拟管理员检查
+  return authorization === "Bearer admin-token";
+}
+
+async function getRealTimeStats() {
+  return {
+    users: Math.floor(Math.random() * 1000),
+    posts: Math.floor(Math.random() * 5000),
+    comments: Math.floor(Math.random() * 10000)
+  };
+}
+
+async function getCachedStats() {
+  // 返回相对稳定的统计数据
+  return {
+    users: 500,
+    posts: 2500,
+    comments: 5000
+  };
+}
+```
+
+### 9.测试缓存行为
+
+```tsx
+// app/api/cache-test/route.ts
+export const dynamic = "force-dynamic"; // 为了测试，禁用缓存
+
+let requestCount = 0;
+
+export async function GET(request: Request) {
+  requestCount++;
+
+  const { searchParams } = new URL(request.url);
+  const testType = searchParams.get("type") || "default";
+
+  const response = {
+    requestCount,
+    testType,
+    timestamp: new Date().toISOString(),
+    randomValue: Math.random()
+  };
+
+  switch (testType) {
+    case "no-cache":
+      return Response.json(response, {
+        headers: {
+          "Cache-Control": "no-cache"
+        }
+      });
+
+    case "short-cache":
+      return Response.json(response, {
+        headers: {
+          "Cache-Control": "public, max-age=10" // 10秒缓存
+        }
+      });
+
+    case "long-cache":
+      return Response.json(response, {
+        headers: {
+          "Cache-Control": "public, max-age=3600" // 1小时缓存
+        }
+      });
+
+    default:
+      return Response.json(response);
+  }
+}
+```
+
+### 10.缓存最佳实践
+
+#### 10.1 选择合适的缓存策略
+
+```tsx
+// app/api/best-practices/route.ts
+
+// 对于静态内容（配置、常量等）
+export const revalidate = 3600; // 1小时重新验证
+
+// 对于半动态内容（用户资料、文章等）
+export const revalidate = 300; // 5分钟重新验证
+
+// 对于动态内容（实时数据、用户特定数据）
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const dataType = searchParams.get("type");
+
+  switch (dataType) {
+    case "config":
+      // 配置数据，很少变化
+      return Response.json(await getConfig(), {
+        headers: {
+          "Cache-Control": "public, max-age=86400" // 24小时
+        }
+      });
+
+    case "user-content":
+      // 用户内容，定期更新
+      return Response.json(await getUserContent(), {
+        headers: {
+          "Cache-Control": "public, max-age=300, stale-while-revalidate=60"
+        }
+      });
+
+    case "real-time":
+      // 实时数据，不缓存
+      return Response.json(await getRealTimeData(), {
+        headers: {
+          "Cache-Control": "no-cache"
+        }
+      });
+
+    default:
+      return Response.json({ error: "Invalid data type" }, { status: 400 });
+  }
+}
+
+async function getConfig() {
+  return { theme: "dark", version: "1.0.0" };
+}
+
+async function getUserContent() {
+  return { posts: [], lastUpdate: new Date().toISOString() };
+}
+
+async function getRealTimeData() {
+  return { active_users: Math.floor(Math.random() * 100) };
+}
+```
+
+### 11.缓存问题排查
+
+```tsx
+// app/api/debug-cache/route.ts
+export async function GET(request: Request) {
+  const debugInfo = {
+    timestamp: new Date().toISOString(),
+    url: request.url,
+    headers: Object.fromEntries(request.headers),
+    cacheInfo: {
+      dynamic: process.env.NODE_ENV === "development" ? "dev-mode" : "production",
+      hasSearchParams: new URL(request.url).searchParams.toString() !== "",
+      hasCookies: request.headers.get("cookie") !== null,
+      hasAuthorization: request.headers.get("authorization") !== null
+    }
+  };
+
+  return Response.json(debugInfo, {
+    headers: {
+      "Cache-Control": "no-cache",
+      "X-Debug-Timestamp": Date.now().toString()
+    }
+  });
+}
+```
+
+### 12.总结
+
+- **默认行为**: GET 请求在生产环境中默认被缓存
+- **禁用缓存**: 使用 `dynamic = 'force-dynamic'` 或访问动态数据
+- **控制缓存**: 使用 `revalidate` 设置重新验证时间
+- **细粒度控制**: 使用 `Cache-Control` 头部控制客户端缓存
+- **最佳实践**: 根据数据特性选择合适的缓存策略
+- **调试**: 使用调试端点和响应头来排查缓存问题
+
+通过合理使用这些缓存控制机制，可以在保证性能的同时确保数据的实时性和准确性。

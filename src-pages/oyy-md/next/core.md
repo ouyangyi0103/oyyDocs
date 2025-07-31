@@ -2839,7 +2839,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
 ### 6. 缓存失效和清除
 
-#### 使用缓存标签进行精确失效
+#### revalidateTag 使用缓存标签进行精确失效
 
 ```tsx
 // app/api/products/route.ts
@@ -2882,7 +2882,7 @@ export async function PUT(request: NextRequest) {
 }
 ```
 
-#### 使用路径重新验证
+#### revalidatePath 使用路径重新验证
 
 ```tsx
 // app/api/cms/posts/route.ts
@@ -2942,6 +2942,80 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: "Failed to delete post" }, { status: 500 });
   }
+}
+```
+
+#### cookies.set 或者 cookies.delete 清除缓存
+
+#### router.refresh 刷新当前页面
+
+#### 路由器事件
+
+通过编写其他的 Client Component 钩子（如 usePathname 和 useSearchParams），可以监听页面的更改。
+
+- app/components/navigation.tsx
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+
+export default function Navigation() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    router.refresh();
+  }, [pathname, searchParams]);
+
+  return null;
+}
+```
+
+-app/layout.tsx
+
+```tsx
+import { Suspense } from "react";
+import Navigation from "./components/navigation";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {/* fallback={<div>Loading...</div>} */}
+        <Suspense fallback={null}>
+          <Navigation />
+        </Suspense>
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+- 为什需要使用 Suspense 包裹 Navigation 组件？
+  因为 useSearchParams() 会导致客户端渲染到最近的 Suspense 边界，导致页面闪烁。
+
+```tsx
+"use client";
+import { useRouter } from "next/navigation";
+export default function Page() {
+  const router = useRouter();
+
+  const goAbout = () => {
+    router.push("/about");
+    router.refresh();
+  };
+
+  return (
+    <div>
+      <h1>Page</h1>
+      <button onClick={goAbout}>Refresh</button>
+    </div>
+  );
 }
 ```
 
@@ -3263,3 +3337,902 @@ Next.js 的缓存系统是一个强大且复杂的性能优化工具。通过理
 4. **优化成本** - 减少计算资源和带宽使用
 
 关键是要根据数据的特性和业务需求选择合适的缓存策略，并建立有效的缓存失效机制来保证数据的准确性。
+
+## 六、Server Action 概述
+
+Server Actions 是 Next.js 13.4+ 引入的一项强大功能，它允许我们在服务器端直接处理表单提交和数据变更操作，无需创建单独的 API 路由。这是一种全新的处理服务器端逻辑的方式，极大地简化了全栈应用的开发流程。
+
+### 1. 什么是 Server Actions？
+
+Server Actions 是运行在服务器端的异步函数，可以在 Server Components 或 Client Components 中调用。它们为表单处理、数据变更和其他服务器端操作提供了一种类型安全、渐进增强的解决方案。
+
+**核心特点：**
+
+- **服务器端执行**：代码在服务器上运行，具有完整的服务器环境访问权限
+- **类型安全**：完全支持 TypeScript，提供端到端的类型安全
+- **渐进增强**：即使在 JavaScript 禁用的情况下也能正常工作
+- **无需 API 路由**：直接在组件中定义和使用，简化了代码结构
+
+### 2. 基本语法和使用
+
+#### 2.1 定义 Server Action
+
+```typescript
+// 在文件顶部添加 'use server' 指令
+"use server";
+
+export async function createPost(formData: FormData) {
+  const title = formData.get("title") as string;
+  const content = formData.get("content") as string;
+
+  // 服务器端逻辑：数据库操作、验证等
+  const post = await db.post.create({
+    data: {
+      title,
+      content
+    }
+  });
+
+  // 重新验证缓存
+  revalidatePath("/posts");
+
+  // 重定向到新页面
+  redirect(`/posts/${post.id}`);
+}
+```
+
+#### 2.2 在 Server Component 中使用
+
+```typescript
+// app/posts/create/page.tsx
+import { createPost } from "./actions";
+
+export default function CreatePostPage() {
+  return (
+    <form action={createPost}>
+      <input type="text" name="title" placeholder="文章标题" required />
+      <textarea name="content" placeholder="文章内容" required />
+      <button type="submit">创建文章</button>
+    </form>
+  );
+}
+```
+
+#### 2.3 在 Client Component 中使用
+
+```typescript
+"use client";
+
+import { createPost } from "./actions";
+import { useTransition } from "react";
+
+export default function CreatePostForm() {
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <form
+      action={formData => {
+        startTransition(() => {
+          createPost(formData);
+        });
+      }}
+    >
+      <input type="text" name="title" placeholder="文章标题" disabled={isPending} required />
+      <textarea name="content" placeholder="文章内容" disabled={isPending} required />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "创建中..." : "创建文章"}
+      </button>
+    </form>
+  );
+}
+```
+
+### 3. Server Actions 的优势
+
+#### 3.1 简化的开发流程
+
+```typescript
+// 传统方式：需要创建 API 路由
+// app/api/posts/route.ts
+export async function POST(request: Request) {
+  const formData = await request.formData();
+  // 处理逻辑...
+}
+
+// 客户端代码
+const handleSubmit = async (formData: FormData) => {
+  const response = await fetch("/api/posts", {
+    method: "POST",
+    body: formData
+  });
+  // 处理响应...
+};
+
+// 使用 Server Actions：一步到位
+("use server");
+export async function createPost(formData: FormData) {
+  // 直接处理逻辑，无需额外的 API 路由
+}
+```
+
+#### 3.2 类型安全
+
+```typescript
+"use server";
+
+interface CreatePostData {
+  title: string;
+  content: string;
+  categoryId: number;
+}
+
+export async function createPost(data: CreatePostData) {
+  // TypeScript 会在编译时检查类型
+  const post = await db.post.create({
+    data: {
+      title: data.title, // ✅ 类型安全
+      content: data.content, // ✅ 类型安全
+      categoryId: data.categoryId // ✅ 类型安全
+    }
+  });
+
+  return post;
+}
+
+// 客户端使用时也有类型提示
+async function handleSubmit() {
+  await createPost({
+    title: "标题",
+    content: "内容",
+    categoryId: 1 // ✅ TypeScript 会验证类型
+  });
+}
+```
+
+#### 3.3 渐进增强
+
+```typescript
+// 即使禁用 JavaScript，表单仍然可以正常提交
+export default function ContactForm() {
+  return (
+    <form action={submitContact}>
+      <input type="email" name="email" required />
+      <textarea name="message" required />
+      {/* 即使没有 JavaScript，点击按钮仍会提交表单 */}
+      <button type="submit">发送消息</button>
+    </form>
+  );
+}
+
+("use server");
+async function submitContact(formData: FormData) {
+  const email = formData.get("email");
+  const message = formData.get("message");
+
+  // 发送邮件逻辑
+  await sendEmail({
+    to: "contact@example.com",
+    from: email,
+    subject: "新的联系消息",
+    text: message
+  });
+
+  // 重定向到感谢页面
+  redirect("/thank-you");
+}
+```
+
+### 4. 高级特性和模式
+
+#### 4.1 表单验证
+
+```typescript
+"use server";
+
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+
+const createPostSchema = z.object({
+  title: z.string().min(1, "标题不能为空").max(100, "标题不能超过100字符"),
+  content: z.string().min(10, "内容至少需要10个字符"),
+  categoryId: z.number().positive("请选择有效的分类")
+});
+
+export async function createPost(formData: FormData) {
+  // 数据验证
+  const validatedFields = createPostSchema.safeParse({
+    title: formData.get("title"),
+    content: formData.get("content"),
+    categoryId: Number(formData.get("categoryId"))
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "表单验证失败"
+    };
+  }
+
+  try {
+    // 创建文章
+    const post = await db.post.create({
+      data: validatedFields.data
+    });
+
+    revalidatePath("/posts");
+    return { success: true, postId: post.id };
+  } catch (error) {
+    return {
+      message: "创建文章失败，请重试"
+    };
+  }
+}
+```
+
+#### 4.2 乐观更新
+
+```typescript
+"use client";
+
+import { useOptimistic } from "react";
+import { addTodo } from "./actions";
+
+interface Todo {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export default function TodoList({ todos }: { todos: Todo[] }) {
+  const [optimisticTodos, addOptimisticTodo] = useOptimistic(todos, (state, newTodo: string) => [
+    ...state,
+    { id: Date.now().toString(), text: newTodo, completed: false }
+  ]);
+
+  return (
+    <div>
+      {optimisticTodos.map(todo => (
+        <div key={todo.id}>{todo.text}</div>
+      ))}
+
+      <form
+        action={async formData => {
+          const text = formData.get("text") as string;
+
+          // 乐观更新：立即显示新项目
+          addOptimisticTodo(text);
+
+          // 实际的服务器操作
+          await addTodo(formData);
+        }}
+      >
+        <input type="text" name="text" required />
+        <button type="submit">添加</button>
+      </form>
+    </div>
+  );
+}
+```
+
+#### 4.3 文件上传
+
+```typescript
+"use server";
+
+import { writeFile } from "fs/promises";
+import { join } from "path";
+
+export async function uploadFile(formData: FormData) {
+  const file = formData.get("file") as File;
+
+  if (!file) {
+    throw new Error("没有选择文件");
+  }
+
+  // 验证文件类型和大小
+  if (!file.type.startsWith("image/")) {
+    throw new Error("只允许上传图片文件");
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    // 5MB
+    throw new Error("文件大小不能超过 5MB");
+  }
+
+  // 保存文件
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+
+  const filename = `${Date.now()}-${file.name}`;
+  const path = join(process.cwd(), "public/uploads", filename);
+
+  await writeFile(path, buffer);
+
+  return {
+    success: true,
+    filename,
+    url: `/uploads/${filename}`
+  };
+}
+
+// 客户端组件
+("use client");
+
+export default function FileUploadForm() {
+  const [uploading, setUploading] = useState(false);
+
+  return (
+    <form
+      action={async formData => {
+        setUploading(true);
+        try {
+          const result = await uploadFile(formData);
+          console.log("上传成功:", result);
+        } catch (error) {
+          console.error("上传失败:", error);
+        } finally {
+          setUploading(false);
+        }
+      }}
+    >
+      <input type="file" name="file" accept="image/*" disabled={uploading} required />
+      <button type="submit" disabled={uploading}>
+        {uploading ? "上传中..." : "上传文件"}
+      </button>
+    </form>
+  );
+}
+```
+
+### 5. 错误处理和状态管理
+
+#### 5.1 错误边界处理
+
+```typescript
+"use server";
+
+export async function createUser(formData: FormData) {
+  try {
+    const email = formData.get("email") as string;
+    const name = formData.get("name") as string;
+
+    // 检查邮箱是否已存在
+    const existingUser = await db.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return {
+        error: "EMAIL_EXISTS",
+        message: "该邮箱已被注册"
+      };
+    }
+
+    // 创建用户
+    const user = await db.user.create({
+      data: { email, name }
+    });
+
+    revalidatePath("/users");
+    return {
+      success: true,
+      user
+    };
+  } catch (error) {
+    console.error("创建用户失败:", error);
+
+    return {
+      error: "INTERNAL_ERROR",
+      message: "服务器内部错误，请稍后重试"
+    };
+  }
+}
+
+// 客户端使用
+("use client");
+
+export default function CreateUserForm() {
+  const [result, setResult] = useState<any>(null);
+
+  return (
+    <div>
+      {result?.error && <div className="error">{result.message}</div>}
+
+      {result?.success && <div className="success">用户创建成功！</div>}
+
+      <form
+        action={async formData => {
+          const result = await createUser(formData);
+          setResult(result);
+        }}
+      >
+        <input type="email" name="email" required />
+        <input type="text" name="name" required />
+        <button type="submit">创建用户</button>
+      </form>
+    </div>
+  );
+}
+```
+
+#### 5.2 使用 useFormState
+
+```typescript
+"use client";
+
+import { useFormState } from "react-dom";
+import { createPost } from "./actions";
+
+const initialState = {
+  message: null,
+  errors: {}
+};
+
+export default function CreatePostForm() {
+  const [state, formAction] = useFormState(createPost, initialState);
+
+  return (
+    <form action={formAction}>
+      <div>
+        <label htmlFor="title">标题</label>
+        <input id="title" name="title" type="text" placeholder="输入文章标题" />
+        {state.errors?.title && (
+          <div className="error">
+            {state.errors.title.map((error: string) => (
+              <p key={error}>{error}</p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="content">内容</label>
+        <textarea id="content" name="content" placeholder="输入文章内容" />
+        {state.errors?.content && (
+          <div className="error">
+            {state.errors.content.map((error: string) => (
+              <p key={error}>{error}</p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {state.message && <div className="message">{state.message}</div>}
+
+      <button type="submit">创建文章</button>
+    </form>
+  );
+}
+
+// Server Action 需要返回状态
+("use server");
+
+export async function createPost(prevState: any, formData: FormData) {
+  // 验证逻辑...
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "表单验证失败"
+    };
+  }
+
+  // 创建逻辑...
+
+  return {
+    message: "文章创建成功！",
+    errors: {}
+  };
+}
+```
+
+### 6. 性能优化和最佳实践
+
+#### 6.1 缓存策略
+
+```typescript
+"use server";
+
+import { unstable_cache } from "next/cache";
+
+// 缓存数据库查询结果
+const getCachedPosts = unstable_cache(
+  async () => {
+    return await db.post.findMany({
+      orderBy: { createdAt: "desc" }
+    });
+  },
+  ["posts-list"],
+  {
+    tags: ["posts"],
+    revalidate: 3600 // 1小时后重新验证
+  }
+);
+
+export async function getPosts() {
+  return await getCachedPosts();
+}
+
+export async function createPost(formData: FormData) {
+  // 创建文章逻辑...
+
+  // 清除相关缓存
+  revalidateTag("posts");
+  revalidatePath("/posts");
+}
+```
+
+#### 6.2 批量操作
+
+```typescript
+"use server";
+
+export async function bulkDeletePosts(postIds: string[]) {
+  try {
+    // 使用事务确保数据一致性
+    const result = await db.$transaction(async tx => {
+      // 删除相关评论
+      await tx.comment.deleteMany({
+        where: {
+          postId: { in: postIds }
+        }
+      });
+
+      // 删除文章
+      await tx.post.deleteMany({
+        where: {
+          id: { in: postIds }
+        }
+      });
+
+      return { deletedCount: postIds.length };
+    });
+
+    // 重新验证缓存
+    revalidateTag("posts");
+    revalidatePath("/posts");
+
+    return {
+      success: true,
+      message: `成功删除 ${result.deletedCount} 篇文章`
+    };
+  } catch (error) {
+    console.error("批量删除失败:", error);
+    return {
+      success: false,
+      message: "删除失败，请重试"
+    };
+  }
+}
+```
+
+#### 6.3 防抖和节流
+
+```typescript
+"use client";
+
+import { useDebouncedCallback } from "use-debounce";
+import { searchPosts } from "./actions";
+
+export default function SearchForm() {
+  const [results, setResults] = useState([]);
+
+  const debouncedSearch = useDebouncedCallback(
+    async (searchTerm: string) => {
+      if (searchTerm.length > 2) {
+        const results = await searchPosts(searchTerm);
+        setResults(results);
+      }
+    },
+    300 // 300ms 防抖
+  );
+
+  return (
+    <div>
+      <input type="text" placeholder="搜索文章..." onChange={e => debouncedSearch(e.target.value)} />
+
+      <div>
+        {results.map(post => (
+          <div key={post.id}>{post.title}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+("use server");
+
+export async function searchPosts(query: string) {
+  return await db.post.findMany({
+    where: {
+      OR: [{ title: { contains: query, mode: "insensitive" } }, { content: { contains: query, mode: "insensitive" } }]
+    },
+    take: 10
+  });
+}
+```
+
+### 7. 安全性考虑
+
+#### 7.1 权限验证
+
+```typescript
+"use server";
+
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+
+export async function deletePost(postId: string) {
+  // 验证用户身份
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  // 检查用户权限
+  const post = await db.post.findUnique({
+    where: { id: postId },
+    select: { authorId: true }
+  });
+
+  if (!post) {
+    throw new Error("文章不存在");
+  }
+
+  if (post.authorId !== session.user.id) {
+    throw new Error("没有权限删除此文章");
+  }
+
+  // 执行删除
+  await db.post.delete({
+    where: { id: postId }
+  });
+
+  revalidatePath("/posts");
+  redirect("/posts");
+}
+```
+
+#### 7.2 输入验证和清理
+
+```typescript
+"use server";
+
+import { z } from "zod";
+import DOMPurify from "isomorphic-dompurify";
+
+const createCommentSchema = z.object({
+  content: z
+    .string()
+    .min(1, "评论不能为空")
+    .max(1000, "评论不能超过1000字符")
+    .refine(content => content.trim().length > 0, "评论不能只包含空格"),
+  postId: z.string().uuid("无效的文章ID")
+});
+
+export async function createComment(formData: FormData) {
+  const session = await auth();
+
+  if (!session?.user) {
+    throw new Error("请先登录");
+  }
+
+  // 验证输入
+  const validatedFields = createCommentSchema.safeParse({
+    content: formData.get("content"),
+    postId: formData.get("postId")
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors
+    };
+  }
+
+  // 清理 HTML 内容
+  const sanitizedContent = DOMPurify.sanitize(validatedFields.data.content);
+
+  // 创建评论
+  const comment = await db.comment.create({
+    data: {
+      content: sanitizedContent,
+      postId: validatedFields.data.postId,
+      authorId: session.user.id
+    }
+  });
+
+  revalidatePath(`/posts/${validatedFields.data.postId}`);
+
+  return {
+    success: true,
+    comment
+  };
+}
+```
+
+### 8. 测试策略
+
+#### 8.1 单元测试
+
+```typescript
+// __tests__/actions.test.ts
+import { createPost } from "@/app/actions";
+import { prismaMock } from "@/lib/prisma-mock";
+
+jest.mock("@/lib/prisma", () => ({
+  db: prismaMock
+}));
+
+describe("createPost Server Action", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("应该成功创建文章", async () => {
+    const mockPost = {
+      id: "1",
+      title: "测试文章",
+      content: "测试内容",
+      createdAt: new Date()
+    };
+
+    prismaMock.post.create.mockResolvedValue(mockPost);
+
+    const formData = new FormData();
+    formData.append("title", "测试文章");
+    formData.append("content", "测试内容");
+
+    const result = await createPost(formData);
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: {
+        title: "测试文章",
+        content: "测试内容"
+      }
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.post).toEqual(mockPost);
+  });
+
+  it("应该处理验证错误", async () => {
+    const formData = new FormData();
+    formData.append("title", ""); // 空标题
+    formData.append("content", "测试内容");
+
+    const result = await createPost(formData);
+
+    expect(result.errors).toBeDefined();
+    expect(result.errors.title).toContain("标题不能为空");
+  });
+});
+```
+
+#### 8.2 集成测试
+
+```typescript
+// __tests__/integration/post-creation.test.ts
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import CreatePostForm from "@/components/CreatePostForm";
+
+// Mock Server Action
+jest.mock("@/app/actions", () => ({
+  createPost: jest.fn()
+}));
+
+describe("文章创建集成测试", () => {
+  it("应该处理完整的表单提交流程", async () => {
+    const mockCreatePost = require("@/app/actions").createPost;
+    mockCreatePost.mockResolvedValue({ success: true });
+
+    render(<CreatePostForm />);
+
+    // 填写表单
+    fireEvent.change(screen.getByLabelText("标题"), {
+      target: { value: "新文章标题" }
+    });
+
+    fireEvent.change(screen.getByLabelText("内容"), {
+      target: { value: "新文章内容" }
+    });
+
+    // 提交表单
+    fireEvent.click(screen.getByText("创建文章"));
+
+    // 验证 Server Action 被调用
+    await waitFor(() => {
+      expect(mockCreatePost).toHaveBeenCalled();
+    });
+
+    // 验证成功消息
+    expect(screen.getByText("文章创建成功！")).toBeInTheDocument();
+  });
+});
+```
+
+### 9. 调试和监控
+
+#### 9.1 日志记录
+
+```typescript
+"use server";
+
+import { logger } from "@/lib/logger";
+
+export async function createPost(formData: FormData) {
+  const startTime = Date.now();
+  const title = formData.get("title") as string;
+
+  try {
+    logger.info("开始创建文章", { title });
+
+    const post = await db.post.create({
+      data: {
+        title,
+        content: formData.get("content") as string
+      }
+    });
+
+    const duration = Date.now() - startTime;
+    logger.info("文章创建成功", {
+      postId: post.id,
+      title,
+      duration
+    });
+
+    return { success: true, post };
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    logger.error("文章创建失败", {
+      title,
+      duration,
+      error: error.message,
+      stack: error.stack
+    });
+
+    throw error;
+  }
+}
+```
+
+#### 9.2 性能监控
+
+```typescript
+"use server";
+
+import { performance } from "perf_hooks";
+
+export async function searchPosts(query: string) {
+  const startTime = performance.now();
+
+  try {
+    const results = await db.post.findMany({
+      where: {
+        title: { contains: query, mode: "insensitive" }
+      },
+      take: 20
+    });
+
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+
+    // 记录性能指标
+    console.log(`搜索查询耗时: ${duration.toFixed(2)}ms`);
+
+    if (duration > 1000) {
+      console.warn(`慢查询警告: 搜索"${query}"耗时 ${duration.toFixed(2)}ms`);
+    }
+
+    return results;
+  } catch (error) {
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+
+    console.error(`搜索失败，耗时: ${duration.toFixed(2)}ms`, error);
+    throw error;
+  }
+}
+```
+
+Server Actions 代表了 Next.js 全栈开发的一个重大进步，它简化了服务器端逻辑的处理，提供了更好的开发体验和用户体验。通过合理使用 Server Actions，我们可以构建更加高效、安全和易维护的现代 Web 应用。

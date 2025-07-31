@@ -44,9 +44,7 @@ const App = () => {
 ### 3.React.createElement 的简易实现
 
 1. 用于生成虚拟 DOM 树，返回一个包含 type（元素类型）和 props（属性和子元素）的对象。 children 可以是文本或其他虚拟 DOM 对象。 React.createTextElement:
-
 2. 用于处理文本节点，将字符串封装成虚拟 DOM 对象。 React.render:
-
 3. 将虚拟 DOM 转化为实际 DOM 元素。 使用递归的方式渲染所有子元素。 最后将生成的 DOM 节点插入到指定的容器中
 
 ```tsx
@@ -105,7 +103,7 @@ const React = {
 注意：React 并不是使用这个原生浏览器的函数实现的，他是使用的这个函数的思想，react 自己实现了这么一个函数
 :::
 
-#### 【1】requestidlecallback 执行阶段
+#### 2.1 requestidlecallback 执行阶段
 
 ::: tip
 
@@ -118,7 +116,7 @@ const React = {
 7. 上面 6 个步骤完成后，如果此时还有空闲时间，执行 requestIdleCallback
    :::
 
-#### 【2】requestidlecallback 基本用法
+#### 2.2 requestidlecallback 基本用法
 
 requestidlecallback 接受一个回调函数 callback 并且在回调函数中会注入参数 deadline
 
@@ -165,20 +163,20 @@ requestIdleCallback(workLoop, { timeout: 1000 });
 
 ### 3.提问
 
-#### 【1】为什么 React 不用原生 requestIdleCallback 实现呢？
+#### 3.1 为什么 React 不用原生 requestIdleCallback 实现呢？
 
 1. 兼容性差 Safari 并不支持
 2. 控制精细度 React 要根据组件优先级、更新的紧急程度等信息，更精确地安排渲染的工作
 3. 执行时机 requestIdleCallback(callback) 回调函数的执行间隔是 50ms（W3C 规定），也就是 20FPS，1 秒内执行 20 次，间隔较长。
 4. 差异性 每个浏览器实现该 API 的方式不同，导致执行时机有差异有的快有的慢
 
-#### 【2】requestIdleCallback 替代方案是什么？
+#### 3.2 requestIdleCallback 替代方案是什么？
 
 选择 MessageChannel 的原因，是首先异步得是个宏任务，因为宏任务中会在下次事件循环中执行，不会阻塞当前页面的更新。MessageChannel 是一个宏任务。
 没选常见的 setTimeout，是因为 MessageChannel 能较快执行，在 0 ～ 1ms 内触发，像 setTimeout 即便设置 timeout 为 0 还是需要 4 ～ 5ms。相同时间下，MessageChannel 能够完成更多的任务。
 若浏览器不支持 MessageChannel，还是得降级为 setTimeout。
 
-#### 【3】MessageChannel 基本用法
+#### 3.3 MessageChannel 基本用法
 
 MessageChanne 设计初衷是为了方便 我们在不同的上下文之间进行通讯，例如 web Worker,iframe 它提供了两个端口（port1 和 port2），通过这些端口，消息可以在两个独立的线程之间双向传递
 
@@ -657,7 +655,13 @@ function commitWork(fiber) {
 
 // 测试用例diff
 
-render(React.createElement("div", { id: 1 }, React.createElement("span", null, "hello 11")), document.getElementById("root"));
+render(
+  React.createElement("div", { id: 1 }, React.createElement("span", null, "hello 11")),
+  document.getElementById("root")
+);
 
-render(React.createElement("div", { id: 1 }, React.createElement("span", null, "hello 22")), document.getElementById("root"));
+render(
+  React.createElement("div", { id: 1 }, React.createElement("span", null, "hello 22")),
+  document.getElementById("root")
+);
 ```

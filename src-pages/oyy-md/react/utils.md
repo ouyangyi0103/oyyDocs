@@ -13,22 +13,22 @@ head:
 
 Babel 是一个 JavaScript 编译器,提供了 JavaScript 的编译过程，能够将源代码转换为目标代码。
 
-### 【1】核心功能
+### 1.核心功能
 
 1. 语法转换：将新版本的 JavaScript 语法转换为旧版本的语法
 2. Polyfill：通过引入额外的代码，使新功能在旧浏览器中可用
 3. JSX: 将 JSX 语法转换成普通的 JavaScript 语法
 4. 插件: 为 Babel 提供自定义功能
 
-### 【2】案例实现
+### 2.案例实现
 
-#### 1.安装包
+#### 2.1 安装包
 
-```tsx
+```bash
 npm install --save-dev @babel/core @babel/cli @babel/preset-env
 ```
 
-#### 2.测试文件
+#### 2.2 测试文件
 
 test.js
 
@@ -44,7 +44,7 @@ const x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => x % 2 === 0);
 const y = Object.assign({}, { name: 1 });
 ```
 
-#### 2.代码转换
+#### 2.3 代码转换
 
 index.js
 
@@ -60,7 +60,7 @@ const result = Babel.transform(file, {
 console.log(result.code);
 ```
 
-如何去支持新特新，比如 Promise、Object.assign 等，需要下载 core-js 这个包，用它来进行新特性的处理
+如何去支持新特新，比如 `Promise、Object.assign` 等，需要下载` core-js` 这个包，用它来进行新特性的处理
 
 ```tsx
 //记得设置package.json的type为module
@@ -76,7 +76,7 @@ const result = Babel.transform(file, {
 console.log(result.code);
 ```
 
-如何去支持 jsx，需要使用@babel/preset-react 这个预设包，用来处理 jsx
+如何去支持 jsx，需要使用 `@babel/preset-react` 这个预设包，用来处理 `jsx`
 
 ```tsx
 import Babel from "@babel/core";
@@ -108,7 +108,7 @@ var App = function App() {
 // 其实也就是调用了React.createElement去创建元素
 ```
 
-#### 3.编写 Babel 插件
+#### 2.4 编写 Babel 插件
 
 ```tsx
 import Babel from "@babel/core";
@@ -156,17 +156,16 @@ SWC 在单线程上比 Babel 快 20 倍，在四核上快 70 倍。
 2. 解释型 JavaScript 是一种解释型语言，通常在浏览器或 Node.js 环境中通过解释器运行。尽管现代的 JavaScript 引擎（如 V8 引擎）使用了 JIT（即时编译）技术来提高性能，但解释型语言本质上还是需要更多的运行时开销。
    :::
 
-### 【1】核心功能
+### 1.核心功能
 
-1. JavaScript/TypeScript 转换 可以将现代 JavaScript（ES6+）和 TypeScript 代码转换为兼容旧版 JavaScript 环境的代码。这包括语法转换（如箭头函数、解构赋值等）以及一些 polyfill 的处理
-   模块打包 SWC 提供了基础的打包功能，可以将多个模块捆绑成一个单独的文件
+1. JavaScript/TypeScript 转换 可以将现代 JavaScript（ES6+）和 TypeScript 代码转换为兼容旧版 JavaScript 环境的代码。这包括语法转换（如箭头函数、解构赋值等）以及一些 polyfill 的处理模块打包 SWC 提供了基础的打包功能，可以将多个模块捆绑成一个单独的文件
 2. SWC 支持代码压缩和优化功能，类似于 Terser。它可以对 JavaScript 代码进行压缩，去除不必要的空白、注释，并对代码进行优化以减小文件大小，提高加载速度
 3. SWC 原生支持 TypeScript，可以将 TypeScript 编译为 JavaScript
 4. SWC 支持 React 和 JSX 语法，可以将 JSX 转换为标准的 JavaScript 代码。它还支持一些现代的 React 特性
 
-### 【2】案例实现
+### 2.案例实现
 
-#### 1.语法转换
+#### 2.1 语法转换
 
 转换前
 
@@ -204,7 +203,7 @@ console.log(result.code);
 // es5的代码
 ```
 
-#### 2. swc 转换 react jsx 语法
+#### 2.2 swc 转换 react jsx 语法
 
 ```tsx
 import swc from "@swc/core";
@@ -227,7 +226,7 @@ console.log(result.code);
 console.timeEnd();
 ```
 
-#### 3.swc 简易打包
+#### 2.3swc 简易打包
 
 目前 swc 打包只能支持 cjs 未来才能支持 esm 比较鸡肋 其次就是参数只能 entry output 暂无其他参数
 创建配置文件 spack.config.js

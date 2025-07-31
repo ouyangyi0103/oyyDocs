@@ -54,7 +54,7 @@ export default defineConfig({
           {
             text: "二、React",
             items: [
-              { text: "JSX", link: "src-pages/oyy-md/react/jsx" },
+              { text: "TSX", link: "src-pages/oyy-md/react/tsx" },
               { text: "使用工具", link: "src-pages/oyy-md/react/utils" },
               { text: "原理", link: "src-pages/oyy-md/react/principle" },
               { text: "Hooks", link: "src-pages/oyy-md/react/hooks" },

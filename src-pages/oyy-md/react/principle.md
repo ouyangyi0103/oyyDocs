@@ -356,9 +356,9 @@ scheduler.scheduleCallback(NormalPriority, () => {
 
 Fiber 是 React 16 引入的一种新的协调引擎，用于解决和优化 React 应对复杂 UI 渲染时的性能问题
 
-### 【1】 作用
+### 1.作用
 
-为了解决 React15 在大组件更新时产生的卡顿现象，React 团队提出了 Fiber 架构，并在 React16 发布，将 同步递归无法中断的更新 重构为 异步的可中断更新
+为了解决 React15 在大组件更新时产生的卡顿现象，React 团队提出了 Fiber 架构，并在 React16 发布，将`同步递归无法中断的更新`重构为`异步的可中断更新`
 
 它实现了 4 个具体目标
 
@@ -366,16 +366,16 @@ Fiber 是 React 16 引入的一种新的协调引擎，用于解决和优化 Rea
 
 2. 优先级调度：在 Fiber 架构下，React 可以根据不同任务的优先级决定何时更新哪些部分。React 会优先更新用户可感知的部分（如动画、用户输入），而低优先级的任务（如数据加载后的界面更新）可以延后执行。
 
-3. 双缓存树（Fiber Tree）：Fiber 架构中有两棵 Fiber 树——current fiber tree（当前正在渲染的 Fiber 树）和 work in progress fiber tree（正在处理的 Fiber 树）。React 使用这两棵树来保存更新前后的状态，从而更高效地进行比较和更新。
+3. 双缓存树（Fiber Tree）：Fiber 架构中有两棵 Fiber 树——`currentFiberTree（当前正在渲染的 Fiber 树）`和 `workInProgressFiberTree（正在处理的 Fiber 树）`。React 使用这两棵树来保存更新前后的状态，从而更高效地进行比较和更新。
 
 4. 任务切片：在浏览器的空闲时间内（利用 requestIdleCallback 思想），React 可以将渲染任务拆分成多个小片段，逐步完成 Fiber 树的构建，避免一次性完成所有渲染任务导致的阻塞。
 
-### 【2】 fiber 的双缓存架构
+### 2.fiber 的双缓存架构
 
-react 内部有两颗树维护着两个状态：一个是 fiber tree，一个是 work in progress fiber tree
+react 内部有两颗树维护着两个状态：一个是 `fiber tree`，一个是 `work in progress fiber tree`
 
-1. fiber tree:表示当前正在渲染的 fiber 树
-2. work in progress fiber tree:表示更新过程中新生成的 fiber 树，也就是渲染的下一次 UI 状态
+1. **fiber tree**: 表示当前正在渲染的 fiber 树
+2. **work in progress fiber tree**: 表示更新过程中新生成的 fiber 树，也就是渲染的下一次 UI 状态
 
 举个例子:
 当我们用 canvas 绘制动画时，每一帧绘制前都会调用 ctx.clearRect 清除上一帧的画面，如果当前帧画面计算量比较大，导致清除上一帧画面到绘制当前帧画面之间有较长间隙，就会出现白屏。
@@ -404,7 +404,7 @@ A -> B -> C -> D
 如果{A B C D} 旧节点存在 { A C B E} 新节点没有存在那么说明是删除了
 ![foo](/react/diff.png)
 
-### 【1】vDom Fiber Diff 完整版
+### 1.VDom Fiber Diff 完整版
 
 ```tsx
 //vdom

@@ -1263,19 +1263,19 @@ export default function AdvancedCounter() {
 
 useEffect 是 React 中用于处理副作用的钩子。并且 useEffect 还在这里充当生命周期函数，在之前你可能会在类组件中使用 componentDidMount、componentDidUpdate 和 componentWillUnmount 来处理这些生命周期事件。
 
-#### 【1】什么是副作用函数，什么是纯函数？
+#### 1.1 什么是副作用函数，什么是纯函数？
 
-##### (1).纯函数
+##### 1.1.1 纯函数
 
-1. 输入决定输出：相同的输入永远会得到相同的输出。这意味着函数的行为是可预测的。
-2. 无副作用：纯函数不会修改外部状态，也不会依赖外部可变状态。因此，纯函数内部的操作不会影响外部的变量、文件、数据库等。
+- 输入决定输出：相同的输入永远会得到相同的输出。这意味着函数的行为是可预测的。
+- 无副作用：纯函数不会修改外部状态，也不会依赖外部可变状态。因此，纯函数内部的操作不会影响外部的变量、文件、数据库等。
 
 ```tsx
 const add = (x: number, y: number) => x + y;
 add(1, 2); //3
 ```
 
-##### (2).副作用函数
+##### 1.1.2 副作用函数
 
 1. 副作用函数 指的是那些在执行时会改变外部状态或依赖外部可变状态的函数。
 2. 可预测性降低但是副作用不一定是坏事有时候副作用带来的效果才是我们所期待的
@@ -1314,9 +1314,9 @@ let newobj = changeObj(obj);
 console.log(obj, "after", newobj); //obj 小满 newobj 大满
 ```
 
-#### 【2】模拟生命周期
+#### 1.2 模拟生命周期
 
-##### (1).模拟 componentDidUpdate()
+##### 1.2.1 模拟 componentDidUpdate()
 
 ```tsx
 // 如果不写[]，那么在任何一个状态发生改变的时候，useEffect里面的回调函数都会进行调用
@@ -1330,7 +1330,7 @@ useLayoutEffect(() => {
 });
 ```
 
-##### (2).模拟 componentDidMount()
+##### 1.2.2 模拟 componentDidMount()
 
 ```tsx
 // 第二个参数传[]，相当于不监视任何状态的改变，这样写就相当于componentDidMount()
@@ -1340,7 +1340,7 @@ useEffect(() => {
 }, []);
 ```
 
-##### (3).模拟 componentWillUnmount()
+##### 1.2.3 模拟 componentWillUnmount()
 
 ```tsx
 // 返回一个函数，相当于componentWillUnmount()
@@ -1352,7 +1352,7 @@ useEffect(() => {
 }, []);
 ```
 
-##### (4).模拟 componentWillReceiveProps()
+##### 1.2.4 模拟 componentWillReceiveProps()
 
 ```tsx
 // 第二个参数为接收[props]的话，模拟componentWillReceiveProps
@@ -1362,7 +1362,7 @@ useEffect(() => {
 }, [props]);
 ```
 
-#### 【3】案例
+#### 1.3 案例
 
 ```tsx
 import React, { useState, useEffect } from "react";
@@ -1432,27 +1432,27 @@ export default App;
 
 useLayoutEffect 是 React 提供的一个用于处理副作用的钩子。它与 useEffect 类似，但它在 DOM 更新后同步执行，确保在 DOM 更新后执行的副作用不会阻塞渲染。
 
-#### 【1】使用方法
+#### 2.1 使用方法
 
 与 useEffect 使用方法一样
 
-#### 【2】useLayoutEffect 和 useEffect 有什么区别？
+#### 2.2 useLayoutEffect 和 useEffect 有什么区别？
 
-执行时机
+**执行时机**
 
-1. useEffect：组件更新挂载完成 -> 浏览器 dom 绘制完成 -> 执行 useEffect 回调
-2. useLayoutEffect：组件更新挂载完成 -> 执行 useLayoutEffect 回调 -> 浏览器 dom 绘制完成 -> 执行 useEffect 回调
+- useEffect：组件更新挂载完成 -> 浏览器 dom 绘制完成 -> 执行 useEffect 回调
+- useLayoutEffect：组件更新挂载完成 -> 执行 useLayoutEffect 回调 -> 浏览器 dom 绘制完成 -> 执行 useEffect 回调
 
-同步或者异步
+**同步或者异步**
 
-1. useEffect：它的 callback 是 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">异步调用</span>，它会等主线程任务执行完成，DOM 更新，js 执行完成，视图绘制完成之后，才会去执行
-2. useLayoutEffect：它的 callback 是 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">同步调用</span>，执行时机是 DOM 更新之后，视图绘制完成之前，才会去执行。这个时间可以去更方便的去修改 DOM；如果说修改 DOM 放在 useEffect 里，界面上的视图会绘制两次，就会导致回流和重绘；如果要修改 DOM 用 useLayoutEffect，其他都用 useEffect
+- useEffect：它的 callback 是`异步调用`，它会等主线程任务执行完成，DOM 更新，js 执行完成，视图绘制完成之后，才会去执行
+- useLayoutEffect：它的 callback 是`同步调用`，执行时机是 DOM 更新之后，视图绘制完成之前，才会去执行。这个时间可以去更方便的去修改 DOM；如果说修改 DOM 放在 useEffect 里，界面上的视图会绘制两次，就会导致回流和重绘；如果要修改 DOM 用 useLayoutEffect，其他都用 useEffect
 
-哪个和 componentDidMount、componentDidUpdate 更接近
+#### 2.3 哪个和 componentDidMount、componentDidUpdate 更接近？
 
-- 因为 componentDidMount、componentDidUpdate 的执行是同步的，所以 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useLayoutEffect</span> 更接近
+- 因为 componentDidMount、componentDidUpdate 的执行是`同步`的，所以`useLayoutEffect`更接近
 
-#### 【3】使用场景
+#### 2.4 使用场景
 
 1. useEffect：适合用于处理不需要立即同步执行的副作用，比如数据请求、定时器等。
 2. useLayoutEffect：适合用于处理需要立即同步执行的副作用，比如 DOM 操作、动画等。
@@ -1460,7 +1460,7 @@ useLayoutEffect 是 React 提供的一个用于处理副作用的钩子。它与
 ### 3.useInsertionEffect
 
 - useInsertionEffect 比 useLayoutEffect 的执行时机更早，useInsertionEffect 执行时，DOM 还没更新；
-- 本质上 useInsertionEffect 主要是解决 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">CSS-in-js</span> 解决渲染注入样式的性能问题
+- 本质上 useInsertionEffect 主要是解决`CSS-in-js`解决渲染注入样式的性能问题
 
 ## 三、状态传递
 
@@ -1474,11 +1474,11 @@ const refValue = useRef(initialValue);
 refValue.current; // 访问ref的值 类似于vue的ref，Vue的ref是.value，其次就是vue的ref是响应式的，而react的ref不是响应式的
 ```
 
-#### 【1】通过 Ref 操作 DOM 元素
+#### 1.1 通过 Ref 操作 DOM 元素
 
 ::: tip
 
-- 改变 ref.current 属性时，<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">React 不会重新渲染组件</span>。React 不知道它何时会发生改变，因为 ref 是一个 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">普通的 JavaScript 对象</span>。
+- 改变 ref.current 属性时，`React 不会重新渲染组件`。React 不知道它何时会发生改变，因为 ref 是一个 `普通的 JavaScript 对象`。
 - 除了 初始化 外不要在渲染期间写入或者读取 ref.current，否则会使组件行为变得不可预测。
   :::
 
@@ -1502,7 +1502,7 @@ function App() {
 export default App;
 ```
 
-#### 【2】数据存储
+#### 1.2 数据存储
 
 我们实现一个保存 count 的新值和旧值的例子，但是在过程中我们发现一个问题，就是 num 的值一直为 0，这是为什么呢？
 
@@ -1531,7 +1531,7 @@ function App() {
 export default App;
 ```
 
-##### (1).如何修改？
+##### 1.2.1 如何修改？
 
 我们可以使用 useRef 来解决这个问题，因为 useRef 只会在初始化的时候执行一次，当组件 reRender 的时候，useRef 的值不会被重新初始化。
 
@@ -1558,15 +1558,15 @@ function App() {
 export default App;
 ```
 
-#### 【3】实际应用
+#### 1.3 实际应用
 
 我们实现一个计时器的例子，在点击开始计数的时候，计时器会每 300ms 执行一次，在点击结束计数的时候，计时器会被清除。
 
-##### (1).问题
+##### 1.3.1 问题
 
 我们发现，点击 end 的时候，计时器并没有被清除，这是为什么呢？
 
-##### (2).原因
+##### 1.3.2 原因
 
 这是因为组件一直在重新 ReRender,所以 timer 的值一直在被重新赋值为 null，导致无法清除计时器。
 
@@ -1601,7 +1601,7 @@ function App() {
 export default App;
 ```
 
-##### (3).如何解决？
+##### 1.3.3 如何解决？
 
 我们可以使用 useRef 来解决这个问题，因为 useRef 的值不会因为组件的重新渲染而改变。
 
@@ -1649,9 +1649,9 @@ export default App;
 
 ### 2.useImperativeHandle
 
-可以在子组件内部暴露给父组件句柄，那么说人话就是，父组件可以调用子组件的方法，或者访问子组件的属性。 如果你学过 Vue，就类似于 Vue 的 defineExpose。
+可以在子组件内部暴露给父组件句柄，父组件可以调用子组件的方法，或者访问子组件的属性。 如果你学过 Vue，就类似于 Vue 的 `defineExpose`
 
-#### 【1】使用方法
+#### 2.1 使用方法
 
 ```tsx
 useImperativeHandle(
@@ -1665,26 +1665,26 @@ useImperativeHandle(
 );
 ```
 
-#### 【2】参数
+#### 2.2 参数
 
 - ref: 父组件传递的 ref 对象
 - createHandle: 返回值，返回一个对象，对象的属性就是子组件暴露给父组件的方法或属性
 - deps?:[可选] 依赖项，当依赖项发生变化时，会重新调用 createHandle 函数，类似于 useEffect 的依赖项
 
-#### 【3】使用场景
+#### 2.3 使用场景
 
 - 需要暴露给父组件的方法或属性
 - 需要访问子组件的特定实例值
 - 需要在子组件中使用 ref 来操作 DOM 元素
 
-#### 【4】版本使用问题
+#### 2.4 版本使用问题
 
-##### react18 版本
+##### 2.4.1 react18 版本
 
-- react18 版本需要配合<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">forwardRef</span>一起使用
-- forwardRef 包装之后，会有两个参数，第一个参数是 props，第二个参数是 ref
+- react18 版本需要配合`forwardRef`一起使用
+- `forwardRef` 包装之后，会有两个参数，第一个参数是 props，第二个参数是 ref
 
-我们使用的时候只需要将 ref 传递给 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useImperativeHandle</span> 即可，然后 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useImperativeHandle</span> 就可以暴露子组件的方法或属性给父组件， 然后父组件就可以通过 ref 调用子组件的方法或访问子组件的属性
+我们使用的时候只需要将 ref 传递给`useImperativeHandle`即可，然后 `useImperativeHandle`就可以暴露子组件的方法或属性给父组件， 然后父组件就可以通过 ref 调用子组件的方法或访问子组件的属性
 
 ```tsx
 interface ChildRef {
@@ -1736,10 +1736,10 @@ function App() {
 export default App;
 ```
 
-##### react19 版本
+##### 2.4.2 react19 版本
 
-- react19 版本不需要配合<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">forwardRef</span> 一起使用，直接使用即可，他会把 Ref 跟 props 放到一起，你会发现变得更加简单了
-- react19 版本 useRef 的参数改为必须传入一个参数例如 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">`${useRef<ChildRef>(null)}`</span>
+- react19 版本不需要配合`forwardRef`一起使用，直接使用即可，他会把 Ref 跟 props 放到一起，你会发现变得更加简单了
+- react19 版本 useRef 的参数改为必须传入一个参数例如`useRef<ChildRef>(null)`
 
 ```tsx
 interface ChildRef {
@@ -1791,7 +1791,7 @@ function App() {
 export default App;
 ```
 
-#### 【5】执行时机[第三个参数]
+#### 2.5 执行时机[第三个参数]
 
 1. 如果不传入第三个参数，那么 useImperativeHandle 会在组件挂载时执行一次，然后状态更新时，都会执行一次
 
@@ -1812,9 +1812,9 @@ const [count, setCount] = useState(0);
 useImperativeHandle(ref, () => {}, [count]);
 ```
 
-#### 【6】案例
+#### 2.6 案例
 
-例如，我们封装了一个表单组件，提供了两个方法：校验和重置。使用<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useImperativeHandle</span>可以将这些方法暴露给父组件，父组件便可以通过<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">ref</span>调用子组件的方法。
+例如，我们封装了一个表单组件，提供了两个方法：校验和重置。使用`useImperativeHandle`可以将这些方法暴露给父组件，父组件便可以通过`ref`调用子组件的方法。
 
 ```tsx
 interface ChildRef {
@@ -1908,7 +1908,7 @@ export default App;
 
 useContext 提供了一个无需为每层组件手动添加 props，就能在组件树间进行数据传递的方法。设计的目的就是解决组件树间数据传递的问题。
 
-#### 【1】使用方法
+#### 3.1 使用方法
 
 ```tsx
 const MyThemeContext = React.createContext({ theme: "light" }); // 创建一个上下文
@@ -1925,7 +1925,7 @@ function MyComponent() {
 }
 ```
 
-#### 【2】参数
+#### 3.2 参数
 
 入参
 
@@ -1933,11 +1933,11 @@ function MyComponent() {
   返回值
 - 返回传递的 Context 的值，并且是只读的。如果 context 发生变化，React 会自动重新渲染读取 context 的组件
 
-#### 【3】基本用法
+#### 3.3 基本用法
 
-##### react18 版本
+##### 3.3.1 react18 版本
 
-首先我们先通过 createContext 创建一个上下文，然后通过 createContext 创建的组件包裹组件，传递值。
+首先我们先通过 `createContext` 创建一个上下文，然后通过 `createContext` 创建的组件包裹组件，传递值。
 
 被包裹的组件，在任何一个层级都是可以获取上下文的值，那么如何使用呢？
 
@@ -2002,7 +2002,7 @@ function App() {
 export default App;
 ```
 
-##### react19 版本
+##### 3.3.2 react19 版本
 
 ```tsx
 import React, { useContext, useState } from 'react';
@@ -2060,7 +2060,7 @@ function App() {
 export default App;
 ```
 
-#### 【4】注意事项
+#### 3.4 注意事项
 
 - 使用 ThemeContext 时，传递的 key 必须为 value
 
@@ -2096,9 +2096,9 @@ function App() {
 
 ### 1. useMemo
 
-<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useMemo</span> 是 React 提供的一个性能优化 Hook。它的主要功能是避免在每次渲染时执行复杂的计算和对象重建。通过记忆上一次的计算结果，仅当依赖项变化时才会重新计算，提高了性能，有点类似于 Vue 的<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">computed</span>。
+`useMemo`是 React 提供的一个性能优化 Hook。它的主要功能是避免在每次渲染时执行复杂的计算和对象重建。通过记忆上一次的计算结果，仅当依赖项变化时才会重新计算，提高了性能，有点类似于 Vue 的`computed`。
 
-#### [1].使用方法
+#### 1.1 使用方法
 
 ```tsx
 import React, { useMemo, useState } from "react";
@@ -2109,13 +2109,13 @@ const App = () => {
 };
 ```
 
-#### [2].参数
+#### 1.2 参数
 
 - 第一个参数：是一个函数，返回值是计算的值
-- 第二个参数：是一个数组，数组中的值是依赖项，当依赖项变化时，会重新计算<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">(执行时机跟 useEffect 类似)</span>
+- 第二个参数：是一个数组，数组中的值是依赖项，当依赖项变化时，会重新计算`执行时机跟 useEffect 类似`
 - 返回值：返回需要缓存的值
 
-#### [3].案例
+#### 1.3 案例
 
 :::tip
 
@@ -2180,27 +2180,27 @@ function App() {
 export default App;
 ```
 
-#### [4].执行时机
+#### 1.4 执行时机
 
 - 如果依赖项是个空数组，那么 useMemo 的回调函数会执行一次
 - 指定依赖项，当依赖项发生变化时， useMemo 的回调函数会执行
 - 不指定依赖项，不推荐这么用，因为每次渲染和更新都会执行
 
-#### [5].useMemo 总结
+#### 1.5 useMemo 总结
 
-##### (1). 使用场景：
+##### 1.5.1 使用场景：
 
 - 当需要缓存复杂计算结果时
 - 当需要避免不必要的重新计算时
 - 当计算逻辑复杂且耗时时
 
-##### (2). 优点：
+##### 1.5.2 优点：
 
 - 通过记忆化避免不必要的重新计算
 - 提高应用性能
 - 减少资源消耗
 
-##### (3). 注意事项：
+##### 1.5.3 注意事项：
 
 - 不要过度使用，只在确实需要优化的组件上使用
 - 如果依赖项经常变化，useMemo 的效果会大打折扣
@@ -2208,11 +2208,11 @@ export default App;
 
 ### 2. React.memo
 
-<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">React.memo</span> 是一个 React API，用于优化性能。它通过记忆上一次的渲染结果，仅当 props 发生变化时才会重新渲染, 避免重新渲染。
+`React.memo`是一个 React API，用于优化性能。它通过记忆上一次的渲染结果，仅当 props 发生变化时才会重新渲染, 避免重新渲染。
 
-#### [1].使用方法
+#### 2.1 使用方法
 
-使用 <span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">React.memo</span> 包裹组件<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">一般用于子组件</span>，可以避免组件重新渲染。
+使用`React.memo`包裹组件`一般用于子组件`，可以避免组件重新渲染。
 
 ```tsx
 // 第一种用法
@@ -2235,7 +2235,7 @@ const App = () => {
 };
 ```
 
-#### [2].案例
+#### 2.2 案例
 
 首先明确 React 组件的渲染条件：
 
@@ -2252,6 +2252,7 @@ const App = () => {
 
 ```tsx
 import React, { useMemo, useState } from "react";
+
 interface User {
   name: string;
   age: number;
@@ -2260,6 +2261,7 @@ interface User {
 interface CardProps {
   user: User;
 }
+
 const Card = React.memo(function ({ user }: CardProps) {
   console.log("Card render");
   const styles = {
@@ -2268,6 +2270,7 @@ const Card = React.memo(function ({ user }: CardProps) {
     borderRadius: "10px",
     margin: "10px"
   };
+
   return (
     <div style={styles}>
       <h1>{user.name}</h1>
@@ -2276,12 +2279,14 @@ const Card = React.memo(function ({ user }: CardProps) {
     </div>
   );
 });
+
 function App() {
   const [users, setUsers] = useState<User>({
     name: "张三",
     age: 18,
     email: "zhangsan@example.com"
   });
+
   const [search, setSearch] = useState("");
   return (
     <div>
@@ -2308,21 +2313,21 @@ function App() {
 export default App;
 ```
 
-#### [5].React.memo 总结
+#### 2.3 React.memo 总结
 
-##### (1). 使用场景：
+##### 2.3.1 使用场景：
 
 - 当子组件接收的 props 不经常变化时
 - 当组件重新渲染的开销较大时
 - 当需要避免不必要的渲染时
 
-##### (2). 优点：
+##### 2.3.2 优点：
 
 - 通过记忆化避免不必要的重新计算
 - 提高应用性能
 - 减少资源消耗
 
-##### (3). 注意事项：
+##### 2.3.3 注意事项：
 
 - 不要过度使用，只在确实需要优化的组件上使用
 - 对于简单的组件，使用 memo 的开销可能比重新渲染还大
@@ -2330,9 +2335,9 @@ export default App;
 
 ### 3. useCallback
 
-<span style="background-color: #D9E6FF;border-radius: 4px;padding: 4px;color: #4583ED;">useCallback</span> 用于优化性能，返回一个记忆化的回调函数，可以减少不必要的重新渲染，也就是说它是用于缓存组件内的函数，避免函数的重复创建。
+`useCallback`用于优化性能，返回一个记忆化的回调函数，可以减少不必要的重新渲染，也就是说它是用于`缓存组件内的函数`，避免函数的重复创建。
 
-#### [1].使用方法
+#### 3.1 使用方法
 
 ```tsx
 import React, { useCallback } from "react";
@@ -2346,21 +2351,22 @@ const memoizedCallback = useCallback(() => {
 }, [a, b]);
 ```
 
-为什么需要 useCallback？
+##### 为什么需要 useCallback？
 
-在 React 中，函数组件的重新渲染会导致组件内的函数被重新创建，这可能会导致性能问题。useCallback 通过缓存函数，可以减少不必要的重新渲染，提高性能。
+在 React 中，函数组件的重新渲染会导致组件内的函数被重新创建，这可能会导致性能问题。`useCallback` 通过缓存函数，可以减少不必要的重新渲染，提高性能。
 
-useMemo 和 useCallback 的区别？
-共同点：
+##### useMemo 和 useCallback 的区别？
+
+**共同点：**
 
 - 入参是一个函数，依赖项都是一模一样的
 
-不同点：
+**不同点：**
 
 - useMemo 返回函数执行之后的结果，useCallback 返回的是一个当前所缓存的函数
 - useMemo 用于缓存计算结果，而 useCallback 用于缓存函数。
 
-#### [2].参数
+#### 3.2 参数
 
 入参
 
@@ -2371,7 +2377,7 @@ useMemo 和 useCallback 的区别？
 
 - 返回一个记忆化的回调函数，可以减少函数的创建次数，提高性能。
 
-#### [3].案例
+#### 3.3 案例
 
 - 我们创建了一个 Child 子组件，并使用 React.memo 进行优化，memo 在上一章讲过了，他会检测 props 是否发生变化，如果发生变化，就会重新渲染子组件。
 - 我们创建了一个 childCallback 函数，传递给子组件，然后我们输入框更改值，发现子组件居然重新渲染了，但是我们并没有更改 props，这是为什么呢？
@@ -2424,7 +2430,7 @@ const childCallback = useCallback(() => {
 }, []);
 ```
 
-#### [4].useCallback 总结
+#### 3.4 useCallback 总结
 
 - useCallback 的使用需要有所节制，不要盲目地对每个方法应用 useCallback，这样做可能会导致不必要的性能损失。useCallback 本身也需要一定的性能开销。
 - useCallback 并不是为了阻止函数的重新创建，而是通过依赖项来决定是否返回新的函数或旧的函数，从而在依赖项不变的情况下确保函数的地址不变。

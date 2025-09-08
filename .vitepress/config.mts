@@ -71,6 +71,11 @@ export default defineConfig({
             ]
           }
         ]
+      },
+      {
+        text: "小说",
+        collapsed: true,
+        items: [{ text: "一、AI短故事", link: "src-pages/novel-md/ai-story" }]
       }
     ],
     // 右上角图标

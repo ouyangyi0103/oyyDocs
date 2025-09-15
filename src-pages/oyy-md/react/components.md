@@ -517,7 +517,7 @@ const App = () => {
 export default App;
 ```
 
-#### [2].应用场景
+#### 4.2 应用场景
 
 - 弹窗
 - 下拉框
@@ -525,7 +525,7 @@ export default App;
 - 全局遮罩
 - 全局 Loading
 
-#### [3].案例
+#### 4.3 案例
 
 封装弹框组件
 
@@ -585,11 +585,11 @@ export const Modal = () => {
 
 ### 5.HOC 高阶组件
 
-#### [1].什么是高阶组件？
+#### 5.1 什么是高阶组件？
 
 高阶组件就是一个组件，它接受另一个组件作为参数，并返回一个新的组件
 
-#### [2].使用方法
+#### 5.2 使用方法
 
 :::tip
 
@@ -598,7 +598,7 @@ export const Modal = () => {
 - HOC 的命名规范：with 开头，如 withLoading、withAuth 等
   :::
 
-#### [3].案例
+#### 5.3 案例
 
 - 案例一
 
@@ -641,7 +641,7 @@ const UserPage = withAuthorization(Role.USER)(() => {
 - trackType 表示发送埋点的组件类型
 - data 表示发送的数据
 - eventData 表示需要统计的用户行为数据
-- navigator.sendBeacon 是浏览器提供的一种安全可靠的异步数据传输方式，适合发送少量数据，比如埋点数据,并且浏览器关闭时，数据也会发送，不会阻塞页面加载
+- navigator.sendBeacon 是浏览器提供的一种安全可靠的异步数据传输方式，适合发送少量数据，比如埋点数据，并且浏览器关闭时，数据也会发送，不会阻塞页面加载
 
 ```tsx
 const trackService = {

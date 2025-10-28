@@ -13,7 +13,7 @@ export default defineConfig({
     // 右上角导航
     nav: [
       { text: "首页", link: "index.md" },
-      { text: "武林秘籍", link: "src-pages/xm-md/jq.md" }
+      { text: "武林秘籍", link: "src-pages/oyy-md/typescript/ts-infer" }
     ],
     // 全局搜索
     search: {
@@ -38,8 +38,12 @@ export default defineConfig({
         items: [
           {
             text: "一、TypeScript",
+            collapsed: true,
             items: [
-              { text: "基础类型", link: "src-pages/oyy-md/typescript/ts-base" },
+              {
+                text: "基础类型",
+                link: "src-pages/oyy-md/typescript/ts-base"
+              },
               { text: "高级类型", link: "src-pages/oyy-md/typescript/ts-hightype" },
               { text: "类-Symbol", link: "src-pages/oyy-md/typescript/ts-class-symbol" },
               { text: "泛型", link: "src-pages/oyy-md/typescript/ts-generic" },
@@ -53,6 +57,7 @@ export default defineConfig({
           },
           {
             text: "二、React",
+            collapsed: true,
             items: [
               { text: "TSX", link: "src-pages/oyy-md/react/tsx" },
               { text: "使用工具", link: "src-pages/oyy-md/react/utils" },
@@ -65,6 +70,23 @@ export default defineConfig({
           },
           {
             text: "三、Next",
+            collapsed: true,
+            items: [
+              { text: "基础使用", link: "src-pages/oyy-md/next/base" },
+              { text: "核心概念", link: "src-pages/oyy-md/next/core" }
+            ]
+          },
+          {
+            text: "四、Node",
+            collapsed: true,
+            items: [
+              { text: "概述与原理", link: "src-pages/oyy-md/node/base" },
+              { text: "核心API", link: "src-pages/oyy-md/node/coreApi" }
+            ]
+          },
+          {
+            text: "五、Nest",
+            collapsed: true,
             items: [
               { text: "基础使用", link: "src-pages/oyy-md/next/base" },
               { text: "核心概念", link: "src-pages/oyy-md/next/core" }

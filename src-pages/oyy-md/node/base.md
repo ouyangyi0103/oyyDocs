@@ -182,3 +182,179 @@ npm install --registry http://localhost:4873
 # 从本地仓库删除包
 npm unpublish <package-name> --registry http://localhost:4873
 ```
+
+## 八、模块化
+
+Nodejs 模块化规范遵循`commonjs`规范和`esm`规范
+
+### 1.commonjs 规范
+
+#### 1.1 引入模块
+
+```js
+const fs = require("node:fs"); // 导入核心模块
+const express = require("express"); // 导入 node_modules 目录下的模块
+const myModule = require("./myModule.js"); // 导入相对路径下的模块
+const nodeModule = require("./myModule.node"); // 导入扩展模块
+```
+
+#### 1.2 导出模块
+
+```js
+module.exports = {
+  hello: function () {
+    console.log("Hello, world!");
+  }
+};
+
+exports.data = {
+  name: "oyy"
+};
+```
+
+### 2.esm 规范
+
+:::tip
+注意使用 ESM 模块的时候必须开启一个选项 打开 package.json 设置 `type:module`
+:::
+
+#### 2.1 引入模块
+
+引入模块 import 必须写在头部
+
+```js
+import fs from "node:fs";
+```
+
+如果要引入 json 文件需要特殊处理 需要增加断言并且指定类型 json node 低版本不支持
+
+```js
+import data from "./data.json" assert { type: "json" };
+console.log(data);
+```
+
+加载模块的整体对象
+
+```js
+import * as all from "xxx.js";
+```
+
+import 静态加载不支持掺杂在逻辑中如果想动态加载请使用 import 函数模式
+
+```js
+if (true) {
+  import("./test.js").then(res => {});
+}
+```
+
+#### 2.2 导出模块
+
+```js
+export default {
+  name: "test"
+};
+
+export const a = 1;
+```
+
+### 2. cjs 和 ESM 的区别
+
+- cjs 是基于`运行时的同步加载`，esm 是基于`编译时的异步加载`
+- cjs 是可以修改值的，esm 不可修改值（可读的）
+- cjs 不可以 tree shaking，esm 支持 tree shaking
+- commonjs 中顶层的 this 指向这个模块本身，而 ES6 中顶层 this 指向 undefined
+
+## 九、全局变量
+
+### 如何在 nodejs 定义全局变量呢？
+
+在 nodejs 中使用 global 定义全局变量，定义的变量，可以在引入的文件中也可以访问到该变量，例如 a.js global.xxx = 'xxx' require('xxx.js') xxx.js 也可以访问到该变量，在浏览器中我们定义的全局变量都在 window,nodejs 在 global，不同的环境还需要判断，于是在 ECMAScript 2020 出现了一个 `globalThis` 全局变量，在 nodejs 环境会自动切换成 global ，浏览器环境自动切换 window 非常方便
+
+### 关于其他全部 API
+
+:::tip 注意
+由于 nodejs 中没有 DOM 和 BOM，除了这些 API，其他的 ECMAscriptAPI 基本都能用
+:::
+
+### nodejs 内置全局 API
+
+:::danger 注意
+\_\_dirname \_\_filename 只能在 cjs 使用, esm 规范没有这两个全局变量
+:::
+
+- `__dirname` 它表示当前模块的所在目录的绝对路径
+- `__filename` 它表示当前模块文件的绝对路径，包括文件名和文件扩展名
+
+## 十、CSR SSR SEO
+
+在 node 环境中如果要操作 DOM 和 BOM，也是可以的，但是需要借助第三方库 jsdom 帮助我们
+
+`jsdom` 是一个模拟浏览器环境的库，可以在 Node.js 中使用 DOM API
+
+```js
+npm i jsdom
+```
+
+```js
+const fs = require("node:fs");
+const { JSDOM } = require("jsdom");
+
+const dom = new JSDOM(`<!DOCTYPE html><div id='app'></div>`);
+
+const document = dom.window.document;
+
+const window = dom.window;
+
+fetch("https://api.thecatapi.com/v1/images/search?limit=10&page=1")
+  .then(res => res.json())
+  .then(data => {
+    const app = document.getElementById("app");
+    data.forEach(item => {
+      const img = document.createElement("img");
+      img.src = item.url;
+      img.style.width = "200px";
+      img.style.height = "200px";
+      app.appendChild(img);
+    });
+    fs.writeFileSync("./index.html", dom.serialize());
+  });
+```
+
+### 1. SSR 和 CSR
+
+上面的操作属于 SSR`(Server-Side Rendering)`，服务端渲染请求数据和拼装都在服务端完成
+
+而我们的 Vue,react 等框架这里不谈(nuxtjs,nextjs)，是在客户端完成渲染拼接的属于 CSR`(Client-Side Rendering)`客户端渲染
+
+#### 1.1 CSR 和 SSR 区别
+
+1. 页面加载方式：
+
+- CSR: 在 CSR 中，服务器返回一个初始的 HTML 页面，然后浏览器下载并执行 JavaScript 文件，JavaScript 负责动态生成并更新页面内容。这意味着初始页面加载时，内容较少，页面结构和样式可能存在一定的延迟。
+- SSR: 在 SSR 中，服务器在返回给浏览器之前，会预先在服务器端生成完整的 HTML 页面，包含了初始的页面内容。浏览器接收到的是已经渲染好的 HTML 页面，因此初始加载的速度较快。
+
+2. 内容生成和渲染：
+
+- CSR：在 CSR 中，页面的内容生成和渲染是由客户端的 JavaScript 脚本负责的。当数据变化时，JavaScript 会重新生成并更新 DOM，从而实现内容的动态变化。这种方式使得前端开发更加灵活，可以创建复杂的交互和动画效果。
+- 在 SSR 中，服务器在渲染页面时会执行应用程序的代码，并生成最终的 HTML 页面。这意味着页面的初始内容是由服务器生成的，对于一些静态或少变的内容，可以提供更好的首次加载性能。
+
+3. 用户交互和体验：
+
+- CSR：在 CSR 中，一旦初始页面加载完成，后续的用户交互通常是通过 AJAX 或 WebSocket 与服务器进行数据交互，然后通过 JavaScript 更新页面内容。这种方式可以提供更快的页面切换和响应速度，但对于搜索引擎爬虫和 SEO（搜索引擎优化）来说，可能需要一些额外的处理。
+- SSR：在 SSR 中，由于页面的初始内容是由服务器生成的，因此用户交互可以直接在服务器上执行，然后服务器返回更新后的页面。这样可以提供更好的首次加载性能和对搜索引擎友好的内容。
+
+### 2.SEO（搜索引擎优化）
+
+SEO 主要是 title,description,Keywords 这三个部分，爬虫机器人主要也是爬取这些内容
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" version="1"></meta>
+    <title>xxxxxx</title>
+    <meta name="description" content="xxxxxxx"></meta>
+    <meta name="Keywords" content="xxxxxx"></meta>
+  </head>
+</html>
+```

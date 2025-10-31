@@ -81,7 +81,8 @@ export default defineConfig({
             collapsed: true,
             items: [
               { text: "概述与原理", link: "src-pages/oyy-md/node/base" },
-              { text: "核心API", link: "src-pages/oyy-md/node/coreApi" }
+              { text: "核心API", link: "src-pages/oyy-md/node/coreApi" },
+              { text: "实用工具与其它技术", link: "src-pages/oyy-md/node/utils" }
             ]
           },
           {

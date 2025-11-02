@@ -392,3 +392,607 @@ http
   })
   .listen(3000);
 ```
+
+## 六、动静分离
+
+`动静分离`是一种在 Web 服务器架构中常用的优化技术，旨在提高网站的性能和可伸缩性。它基于一个简单的原则：将动态生成的内容（如动态网页、API 请求）与静态资源（如 HTML、CSS、JavaScript、图像文件）分开处理和分发。
+
+通过将动态内容和静态资源存储在不同的服务器或服务上，并使用不同的处理机制，可以提高网站的处理效率和响应速度。这种分离的好处包括：
+
+- **性能优化：** 将静态资源与动态内容分离可以提高网站的加载速度。由于静态资源往往是不变的，可以使用缓存机制将其存储在 CDN（内容分发网络）或浏览器缓存中，从而减少网络请求和数据传输的开销。
+- **负载均衡：** 通过将动态请求分发到不同的服务器或服务上，可以平衡服务器的负载，提高整个系统的可伸缩性和容错性。
+- **安全性：** 将动态请求与静态资源分开处理可以提高系统的安全性。静态资源通常是公开可访问的，而动态请求可能涉及敏感数据或需要特定的身份验证和授权。通过将静态资源与动态内容分离，可以更好地管理访问控制和安全策略。
+
+### 1. 实现动静分离的方法
+
+- 使用反向代理服务器（如 Nginx、Apache）将静态请求和动态请求转发到不同的后端服务器或服务。
+- 将静态资源部署到 CDN 上，通过 CDN 分发静态资源，减轻源服务器的负载。
+- 使用专门的静态文件服务器（如 Amazon S3、Google Cloud Storage）存储和提供静态资源，而将动态请求交给应用服务器处理。
+
+### 2. node 处理动静分离请求示例
+
+```js
+import http from "node:http"; // 导入http模块
+import fs from "node:fs"; // 导入文件系统模块
+import path from "node:path"; // 导入路径处理模块
+import mime from "mime"; // 导入mime模块
+
+const server = http.createServer((req, res) => {
+  const { url, method } = req;
+
+  // 处理静态资源
+  if (method === "GET" && url.startsWith("/static")) {
+    const filePath = path.join(process.cwd(), url); // 获取文件路径
+    const mimeType = mime.getType(filePath); // 获取文件的MIME类型
+    console.log(mimeType); // 打印MIME类型
+
+    fs.readFile(filePath, (err, data) => {
+      // 读取文件内容
+      if (err) {
+        res.writeHead(404, {
+          "Content-Type": "text/plain" // 设置响应头为纯文本类型
+        });
+        res.end("not found"); // 返回404 Not Found
+      } else {
+        res.writeHead(200, {
+          "Content-Type": mimeType, // 设置响应头为对应的MIME类型
+          "Cache-Control": "public, max-age=3600" // 设置缓存控制头
+        });
+        res.end(data); // 返回文件内容
+      }
+    });
+  }
+
+  // 处理动态资源
+  if ((method === "GET" || method === "POST") && url.startsWith("/api")) {
+    // ...处理动态资源的逻辑
+  }
+});
+
+server.listen(80); // 监听端口80
+```
+
+因为每个文件所对应的 mime 类型都不一样，如果手写的话有很多，不过强大的 nodejs 社区提供了 mime 库，可以帮我们通过后缀直接分析出 所对应的 mime 类型，然后我们通过强缓存让浏览器缓存静态资源
+
+### 3. 常见的 mime 类型展示
+
+```txt
+-   文本文件：
+
+    -   text/plain：纯文本文件
+    -   text/html：HTML 文件
+    -   text/css：CSS 样式表文件
+    -   text/javascript：JavaScript 文件
+    -   application/json：JSON 数据
+
+-   图像文件：
+
+    -   image/jpeg：JPEG 图像
+    -   image/png：PNG 图像
+    -   image/gif：GIF 图像
+    -   image/svg+xml：SVG 图像
+
+-   音频文件：
+
+    -   audio/mpeg：MPEG 音频
+    -   audio/wav：WAV 音频
+    -   audio/midi：MIDI 音频
+
+-   视频文件：
+
+    -   video/mp4：MP4 视频
+    -   video/mpeg：MPEG 视频
+    -   video/quicktime：QuickTime 视频
+
+-   应用程序文件：
+
+    -   application/pdf：PDF 文件
+    -   application/zip：ZIP 压缩文件
+    -   application/x-www-form-urlencoded：表单提交数据
+    -   multipart/form-data：多部分表单数据
+```
+
+## 七、邮件服务
+
+邮件服务在我们工作中充当着一个重要的角色
+
+- 任务分配与跟踪：邮件服务可以用于分配任务、指派工作和跟踪项目进展。通过邮件，可以发送任务清单、工作说明和进度更新，确保团队成员了解其责任和任务要求，并监控工作的完成情况。
+- 错误报告和故障排除：当程序出现错误或异常时，程序员可以通过邮件将错误报告发送给团队成员或相关方。这样可以帮助团队了解问题的性质、复现步骤和相关环境，从而更好地进行故障排除和修复。邮件中可以提供详细的错误消息、堆栈跟踪和其他相关信息，以便其他团队成员能够更好地理解问题并提供解决方案。
+- 自动化构建和持续集成：在持续集成和自动化构建过程中，邮件服务可以用于通知团队成员构建状态、单元测试结果和代码覆盖率等信息。如果构建失败或出现警告，系统可以自动发送邮件通知相关人员，以便及时采取相应措施。
+
+### 1. 代码编写
+
+需要下载两个库
+
+```js
+npm install js-yaml
+npm install nodemailer
+```
+
+我们邮件的账号（密码| 授权码）不可能明文写到代码里面一般存放在 yaml 文件或者环境变量里面
+
+```yaml
+pass: 授权码 | 密码
+user: xxxxx@qq.com 邮箱账号
+```
+
+```js
+import nodemailder from "nodemailer";
+import yaml from "js-yaml";
+import fs from "node:fs";
+import http from "node:http";
+import url from "node:url";
+
+const mailConfig = yaml.load(fs.readFileSync("./mail.yaml", "utf8"));
+const transPort = nodemailder.createTransport({
+  service: "qq",
+  port: 587,
+  host: "smtp.qq.com",
+  secure: true,
+  auth: {
+    pass: mailConfig.pass,
+    user: mailConfig.user
+  }
+});
+
+http
+  .createServer((req, res) => {
+    const { pathname } = url.parse(req.url);
+    if (req.method === "POST" && pathname == "/send/mail") {
+      let mailInfo = "";
+      req.on("data", chunk => {
+        mailInfo += chunk.toString();
+      });
+      req.on("end", () => {
+        const body = JSON.parse(mailInfo);
+        transPort.sendMail({
+          to: body.to,
+          from: mailConfig.user,
+          subject: body.subject,
+          text: body.text
+        });
+        res.end("ok");
+      });
+    }
+  })
+  .listen(3000);
+```
+
+## 八、express
+
+`express`是一个流行的 Node.js Web 应用程序框架，用于构建灵活且可扩展的 Web 应用程序和 API。它是基于 Node.js 的 HTTP 模块而创建的，简化了处理 HTTP 请求、响应和中间件的过程。
+
+- **简洁而灵活：** Express 提供了简单而直观的 API，使得构建 Web 应用程序变得简单快捷。它提供了一组灵活的路由和中间件机制，使开发人员可以根据需求定制和组织应用程序的行为。
+- **路由和中间件：** Express 使用路由和中间件来处理 HTTP 请求和响应。开发人员可以定义路由规则，将特定的 URL 路径映射到相应的处理函数。同时，中间件允许开发人员在请求到达路由处理函数之前或之后执行逻辑，例如身份验证、日志记录和错误处理。
+- **路由模块化：** Express 支持将路由模块化，使得应用程序可以根据不同的功能或模块进行分组。这样可以提高代码的组织性和可维护性，使得多人协作开发更加便捷。
+- **视图引擎支持：** Express 可以与各种模板引擎集成，例如 EJS、Pug（以前称为 Jade）、Handlebars 等。这使得开发人员可以方便地生成动态的 HTML 页面，并将数据动态渲染到模板中。
+- **中间件生态系统：** Express 有一个庞大的中间件生态系统，开发人员可以使用各种中间件来扩展和增强应用程序的功能，例如身份验证、会话管理、日志记录、静态文件服务等。
+
+```js
+import express from "express";
+
+const app = express(); //express 是个函数
+
+app.use(express.json()); //如果前端使用的是post并且传递json 需要注册此中间件 不然是undefined
+
+app.get("/", (req, res) => {
+  console.log(req.query); //get 用query 获取前端传过来的参数
+  res.send("get");
+});
+
+app.post("/create", (req, res) => {
+  console.log(req.body); //post用body
+  res.send("post");
+});
+
+//如果是动态参数用 params
+app.get("/:id", (req, res) => {
+  console.log(req.params);
+  res.send("get id");
+});
+
+app.listen(3000, () => console.log("Listening on port 3000"));
+```
+
+### 1. 模块化
+
+- src/user.js
+
+```js
+import express from "express";
+
+const router = express.Router(); //路由模块
+
+router.post("/login", (req, res) => {
+  res.send("login");
+});
+
+router.post("/register", (req, res) => {
+  res.send("register");
+});
+
+export default router;
+```
+
+- app.js
+
+```js
+import express from "express";
+import User from "./src/user.js";
+
+const app = express();
+app.use(express.json());
+app.use("/user", User);
+app.get("/", (req, res) => {
+  console.log(req.query);
+  res.send("get");
+});
+
+app.get("/:id", (req, res) => {
+  console.log(req.params);
+  res.send("get id");
+});
+
+app.post("/create", (req, res) => {
+  console.log(req.body);
+  res.send("post");
+});
+
+app.listen(3000, () => console.log("Listening on port 3000"));
+```
+
+### 2.中间件
+
+中间件是一个关键概念。中间件是处理 HTTP 请求和响应的函数，它位于请求和最终路由处理函数之间，可以对请求和响应进行修改、执行额外的逻辑或者执行其他任务。
+
+中间件函数接收三个参数：req（请求对象）、res（响应对象）和 next（下一个中间件函数）。通过调用 next()方法，中间件可以将控制权传递给下一个中间件函数。如果中间件不调用 next()方法，请求将被中止，不会继续传递给下一个中间件或路由处理函数
+
+#### 2.1 实现日志中间件
+
+log4js 是一个用于 Node.js 应用程序的流行的日志记录库，它提供了灵活且可配置的日志记录功能。log4js 允许你在应用程序中记录不同级别的日志消息，并可以将日志消息输出到多个目标，如控制台、文件、数据库等
+
+```js
+npm install log4js
+```
+
+- express\middleware\logger.js
+
+```js
+import log4js from "log4js";
+
+// 配置 log4js
+log4js.configure({
+  appenders: {
+    out: {
+      type: "stdout", // 输出到控制台
+      layout: {
+        type: "colored" // 使用带颜色的布局
+      }
+    },
+    file: {
+      type: "file", // 输出到文件
+      filename: "./logs/server.log" // 指定日志文件路径和名称
+    }
+  },
+  categories: {
+    default: {
+      appenders: ["out", "file"], // 使用 out 和 file 输出器
+      level: "debug" // 设置日志级别为 debug
+    }
+  }
+});
+
+// 获取 logger
+const logger = log4js.getLogger("default");
+
+// 日志中间件
+const loggerMiddleware = (req, res, next) => {
+  logger.debug(`${req.method} ${req.url}`); // 记录请求方法和URL
+  next();
+};
+
+export default loggerMiddleware;
+```
+
+- app.js
+
+```js
+import express from "express";
+import User from "./src/user.js";
+import loggerMiddleware from "./middleware/logger.js";
+const app = express();
+app.use(loggerMiddleware);
+```
+
+## 九、防盗链
+
+防盗链（Hotlinking）是指在网页或其他网络资源中，通过直接链接到其他网站上的图片、视频或其他媒体文件，从而显示在自己的网页上。这种行为通常会给被链接的网站带来额外的带宽消耗和资源浪费，而且可能侵犯了原始网站的版权。
+
+为了防止盗链，网站管理员可以采取一些措施：
+
+- **通过 HTTP 引用检查：** 网站可以检查 HTTP 请求的来源，如果来源网址与合法的来源不匹配，就拒绝提供资源。这可以通过服务器配置文件或特定的脚本实现。
+- **使用 Referrer 检查：** 网站可以检查 HTTP 请求中的 Referrer 字段，该字段指示了请求资源的来源页面。如果 Referrer 字段不符合预期，就拒绝提供资源。这种方法可以在服务器配置文件或脚本中实现。
+- **使用访问控制列表（ACL）：** 网站管理员可以配置服务器的访问控制列表，只允许特定的域名或 IP 地址访问资源，其他来源的请求将被拒绝。
+- **使用防盗链插件或脚本：** 一些网站平台和内容管理系统提供了专门的插件或脚本来防止盗链。这些工具可以根据需要配置，阻止来自未经授权的网站的盗链请求。
+- **使用水印技术：** 在图片或视频上添加水印可以帮助识别盗链行为，并提醒用户资源的来源。
+
+### 1. 初始化静态资源目录 express.static
+
+```js
+import express from "express";
+
+const app = express();
+//自定义前缀   初始化目录
+app.use("/assets", express.static("static"));
+
+app.listen(3000, () => {
+  console.log("listening on port 3000");
+});
+```
+
+### 2. 增加防盗链
+
+防盗链一般主要就是验证`host`或者`referer`
+
+```js
+import express from "express";
+
+const app = express();
+
+const whitelist = ["localhost"];
+
+// 防止热链中间件
+const preventHotLinking = (req, res, next) => {
+  const referer = req.get("referer"); // 获取请求头部中的 referer 字段
+  if (referer) {
+    const { hostname } = new URL(referer); // 从 referer 中解析主机名
+    if (!whitelist.includes(hostname)) {
+      // 检查主机名是否在白名单中
+      res.status(403).send("Forbidden"); // 如果不在白名单中，返回 403 Forbidden
+      return;
+    }
+  }
+  next(); // 如果在白名单中，继续处理下一个中间件或路由
+};
+
+app.use(preventHotLinking); // 应用防止热链中间件
+app.use("/assets", express.static("static")); // 处理静态资源请求
+
+app.listen(3000, () => {
+  console.log("Listening on port 3000"); // 启动服务器，监听端口3000
+});
+```
+
+## 十、响应头和请求头
+
+### 1. 响应头
+
+`HTTP响应头`（HTTP response headers）是在 HTTP 响应中发送的元数据信息，用于描述响应的特性、内容和行为。它们以键值对的形式出现，每个键值对由一个标头字段（header field）和一个相应的值组成。
+
+```txt
+Access-Control-Allow-Origin:*
+Cache-Control:public, max-age=0, must-revalidate
+Content-Type:text/html; charset=utf-8
+Server:nginx
+Date:Mon, 08 Jan 2024 18:32:47 GMT
+```
+
+#### 1.1 响应头和跨域之间的关系
+
+跨域资源共享（Cross-Origin Resource Sharing，CORS）是一种机制，用于在浏览器中实现跨域请求访问资源的权限控制。当一个网页通过 XMLHttpRequest 或 Fetch API 发起跨域请求时，浏览器会根据同源策略（Same-Origin Policy）进行限制。`同源策略`要求请求的源（`协议、域名和端口`）必须与资源的源相同，否则请求会被浏览器拒绝
+
+- 发起一个请求
+
+```js
+fetch("http://localhost:3000/info")
+  .then(res => {
+    return res.json();
+  })
+  .then(res => {
+    console.log(res);
+  });
+```
+
+- express 编写一个 get 接口
+
+```js
+import express from "express";
+const app = express();
+app.get("/info", (req, res) => {
+  res.json({
+    code: 200
+  });
+});
+app.listen(3000, () => {
+  console.log("http://localhost:3000");
+});
+```
+
+发现是有报错的 根据同源策略我们看到协议一样，域名一样，但是端口不一致，这时候我们就需要后端支持一下，跨域请求资源放行
+
+```js
+Access-Control-Allow-Origin: * | Origin
+
+// 或者增加一个允许5000的端口去访问
+app.use('*',(req,res,next)=>{
+    res.setHeader('Access-Control-Allow-Origin','http://localhost:5500') //允许localhost 5500 访问
+    next()
+})
+```
+
+### 2. 请求头
+
+默认情况下 cors 仅支持`客户端`向`服务器`发送如下九个请求头
+:::danger 注意
+Content-Type 是没有 application-json
+:::
+
+- 1. Accept：指定客户端能够处理的内容类型。
+- 2. Accept-Language：指定客户端偏好的自然语言。
+- 3. Content-Language：指定请求或响应实体的自然语言。
+- 4. Content-Type：指定请求或响应实体的媒体类型。
+- 5. DNT (Do Not Track)：指示客户端不希望被跟踪。
+- 6. Origin：指示请求的源（协议、域名和端口）。
+- 7. User-Agent：包含发起请求的用户代理的信息。
+- 8. Referer：指示当前请求的源 URL。
+- 9. Content-type: `application/x-www-form-urlencoded` | `multipart/form-data` | `text/plain`
+
+如果客户端需要支持额外的请求那么我们需要在客户端支持
+
+```js
+"Access-Control-Allow-Headers", "Content-Type"; //支持application/json
+```
+
+### 3. 请求方法支持
+
+服务端默认只支持 GET POST HEAD OPTIONS 这些请求，如果我们遵循 restFul 风格，要支持 PATCH 或者其它请求呢
+
+增加 patch
+
+```js
+app.patch("/info", (req, res) => {
+  res.json({
+    code: 200
+  });
+});
+```
+
+发送 patch
+
+```js
+fetch("http://localhost:3000/info", {
+  method: "PATCH"
+})
+  .then(res => {
+    return res.json();
+  })
+  .then(res => {
+    console.log(res);
+  });
+```
+
+如果后端不处理，就会进行报错，需要解决的话，如下处理：
+
+```js
+"Access-Control-Allow-Methods", "POST,GET,OPTIONS,DELETE,PATCH";
+```
+
+### 4. 预检请求 options
+
+`预检请求`的主要目的是`确保跨域请求的安全性` 它需要满足一定条件才会触发
+
+- 1. **自定义请求方法：** 当使用非简单请求方法（Simple Request Methods）时，例如 PUT、DELETE、CONNECT、OPTIONS、TRACE、PATCH 等，浏览器会发送预检请求。
+- 2. **自定义请求头部字段：** 当请求包含自定义的头部字段时，浏览器会发送预检请求。自定义头部字段是指不属于简单请求头部字段列表的字段，例如 Content-Type 为 application/json、Authorization 等。
+- 3. **带凭证的请求：** 当请求需要在跨域环境下发送和接收凭证（例如包含 cookies、HTTP 认证等凭证信息）时，浏览器会发送预检请求。
+
+- 发送预检请求
+
+```js
+fetch("http://localhost:3000/info", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({ name: "xmzs" })
+})
+  .then(res => {
+    return res.json();
+  })
+  .then(res => {
+    console.log(res);
+  });
+```
+
+- express
+
+```js
+app.post("/info", (req, res) => {
+  res.json({
+    code: 200
+  });
+});
+```
+
+这样会出现报错，因为`cors`的`Content-Type`默认仅支持`application/x-www-form-urlencoded` | `multipart/form-data` | `text/plain`，并且`application-json`是不属于 cors 范畴之内，需要手动支持，如下所示：
+
+```js
+"Access-Control-Allow-Headers":"Content-Type";
+```
+
+### 5. 自定义响应头
+
+我们在做需求的时候肯定会碰到后端自定义响应头
+
+```js
+app.get("/info", (req, res) => {
+  res.set("xmzs", "1");
+  res.json({
+    code: 200
+  });
+});
+
+// 响应头中
+Xmzs: 1;
+```
+
+那么前端该如何读取自定义响应头呢？如下所示
+
+```js
+fetch("http://localhost:3000/info")
+  .then(res => {
+    const headers = res.headers;
+    console.log(headers.get("xmzs")); //读取自定义响应头
+    return res.json();
+  })
+  .then(res => {
+    console.log(res);
+  });
+```
+
+这个时候获取的结果是 null，因为后端没有抛出该响应头，所以后端需要抛出这个响应头
+
+```js
+app.get("/info", (req, res) => {
+  // 设置自定义响应头
+  res.set("xmzs", "1");
+  // 抛出响应头
+  res.setHeader("Access-Control-Expose-Headers", "xmzs");
+  res.json({
+    code: 200
+  });
+});
+```
+
+### 6.SSE 技术
+
+`Server-Sent Events（SSE）`是一种在`客户端和服务器`之间实现`单向事件流`的机制，允许`服务器主动向客户端`发送事件数据。在 SSE 中，可以使用自定义事件（Custom Events）来发送具有特定类型的事件数据。
+:::danger 注意
+`webSocket` 属于`全双工通讯`，也就是前端可以给后端实时发送，后端也可以给前端实时发送，`SSE`属于`单工通讯`，后端可以给前端实时发送
+:::
+
+- express 增加该响应头`text/event-stream`就变成了 sse event 事件名称 data 发送的数据
+
+```js
+app.get("/sse", (req, res) => {
+  // 响应头设置Content-Type为text/event-stream
+  res.setHeader("Content-Type", "text/event-stream");
+  res.status(200);
+  setInterval(() => {
+    res.write("event: test\n");
+    res.write("data: " + new Date().getTime() + "\n\n");
+  }, 1000);
+});
+```
+
+- 前端接收数据
+
+```js
+const sse = new EventSource("http://localhost:3000/sse");
+sse.addEventListener("test", event => {
+  console.log(event.data);
+});
+```
+
+### 7.new URL()解析
+
+去 CSDN 中看`https://blog.csdn.net/weixin_58540586/article/details/144258400`

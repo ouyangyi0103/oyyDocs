@@ -50,6 +50,7 @@ class Http {
 ```ts
 const Base: ClassDecorator = (target: any) => {
   // target 是Http这个类的构造函数
+  // 优势，有了target这个类的构造函数，就可以不去破坏Http里面原有的结构，可以在prototype上去直接挂东西
   target.prototype.baseUrl = "http://localhost:3000";
   target.prototype.get = function () {
     console.log("get");
@@ -82,7 +83,7 @@ const Get = (url: string) => {
     descriptor: PropertyDescriptor
   ) => {
     // target 读取的是getList的原型对象
-    console.log(target, propertyKey, descriptor); // {} getList {value: [Function:getList],writable:true,enumerable:true,configurable:true}
+    console.log(target, propertyKey, descriptor); // {} getList函数名 {value: [Function:getList],writable:true,enumerable:true,configurable:true}
 
     axios.get(url).then(res => {
       // descriptor这个参数中的value就是getList这个函数，这样就可以把结果传递给getList函数了
@@ -134,7 +135,7 @@ const Result = () => {
     // target 是getList的原型对象  propertyKey 是getList的方法名 parameterIndex 是getList的参数索引
     console.log(target, propertyKey, parameterIndex); // {} getList 0
 
-    // 使用反射元数据。进行数据存储
+    // 使用反射元数据。进行数据存储 第一个参数为key的名字 第二个参数为value
     Reflect.defineMetadata("resKey", "result", target, propertyKey);
   };
   return decorator;
@@ -144,7 +145,7 @@ class Http {
   @Get("http://localhost:3000/list")
   getList(@Result() data: any) {
     // console.log(data.result.list);
-    console.log(data.result.list);
+    console.log(data);
   }
 }
 ```

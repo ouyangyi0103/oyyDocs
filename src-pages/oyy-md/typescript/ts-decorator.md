@@ -76,10 +76,16 @@ http.post();
 
 ```ts
 const Get = (url: string) => {
-  const decorator: MethodDecorator = (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+  const decorator: MethodDecorator = (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) => {
     // target 读取的是getList的原型对象
+    console.log(target, propertyKey, descriptor); // {} getList {value: [Function:getList],writable:true,enumerable:true,configurable:true}
 
     axios.get(url).then(res => {
+      // descriptor这个参数中的value就是getList这个函数，这样就可以把结果传递给getList函数了
       descriptor.value(res.data); // 执行getList方法，并传入res.data
     });
   };
@@ -102,7 +108,11 @@ class Http {
 import "reflect-metadata";
 
 const Get = (url: string) => {
-  const decorator: MethodDecorator = (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+  const decorator: MethodDecorator = (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) => {
     // target 读取的是getList的原型对象
 
     // 获取反射元数据
@@ -116,7 +126,11 @@ const Get = (url: string) => {
 };
 
 const Result = () => {
-  const decorator: ParameterDecorator = (target: any, propertyKey: string, parameterIndex: number) => {
+  const decorator: ParameterDecorator = (
+    target: any,
+    propertyKey: string,
+    parameterIndex: number
+  ) => {
     // target 是getList的原型对象  propertyKey 是getList的方法名 parameterIndex 是getList的参数索引
     console.log(target, propertyKey, parameterIndex); // {} getList 0
 

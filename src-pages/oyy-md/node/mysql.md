@@ -330,3 +330,114 @@ SELECT * FROM `user` LEFT JOIN `table` ON `user`.`id` = `table`.`user_id`
 ```sql
 SELECT * FROM `user` RIGHT JOIN `table` ON `user`.`id` = `table`.`user_id`
 ```
+
+## 七、mysql2
+
+我们需要使用 mysql2 把 mysql 和 express,nodejs 连接起来。
+
+### 1. 依赖安装
+
+```js
+npm install mysql2 express js-yaml
+// mysql2 用来连接mysql和编写sq语句
+// express 用来提供接口 增删改差
+// js-yaml 用来编写配置文件
+```
+
+### 2. 代码编写
+
+- db.config.yaml
+
+```yaml
+db:
+  host: localhost #主机
+  port: 3306 # 端口
+  user: root # 账号
+  password: "123456" #密码
+  database: dlt #数据库名
+```
+
+- index.js
+
+```js
+import mysql2 from "mysql2/promise";
+import fs from "node:fs";
+import jsyaml from "js-yaml";
+import express from "express";
+
+const yaml = fs.readFileSync("./db.config.yaml", "utf-8");
+const config = yaml.load(yaml);
+const sql = await mysql2.createConnection({
+  ...config.db
+});
+
+const app = express();
+app.use(express.json()); // 支持post接口
+
+// 查询全部
+app.get("/", async (req, res) => {
+  const [data] = await sql.query("select * from user");
+  res.send(data);
+});
+
+// 查询单个params
+app.get("/user/:id", async (req, res) => {
+  const [row] = sql.query(`select * from user where id = ${req.params.id}`);
+  res.send(row);
+});
+
+//新增接口
+app.post("/create", async (req, res) => {
+  const { name, age, hobby } = req.body;
+  await sql.query(`insert into user(name,age,hobby) values(?,?,?)`, [name, age, hobby]);
+  res.send({ ok: 1 });
+});
+
+//编辑
+app.post("/update", async (req, res) => {
+  const { name, age, hobby, id } = req.body;
+  await sql.query(`update user set name = ?,age = ?,hobby = ? where id = ?`, [
+    name,
+    age,
+    hobby,
+    id
+  ]);
+  res.send({ ok: 1 });
+});
+
+//删除
+app.post("/delete", async (req, res) => {
+  await sql.query(`delete from user where id = ?`, [req.body.id]);
+  res.send({ ok: 1 });
+});
+
+const port = 3000;
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
+```
+
+## 八、prisma
+
+`Prisma` 是一个现代化的数据库工具套件，用于简化和改进应用程序与数据库之间的交互。它提供了一个类型安全的`查询构建器`和一个`强大的 ORM`（对象关系映射）层，使开发人员能够以声明性的方式操作数据库。
+`Prisma` 支持多种主流数据库，包括 PostgreSQL、MySQL 和 SQLite，它通过生成`标准的数据库模型`来与这些`数据库`进行交互。使用 Prisma，开发人员可以定义数据库模型并生成类型安全的查询构建器，这些构建器提供了一套直观的方法来`创建、更新、删除和查询数据库中的数据`。
+
+Prisma 的主要特点包括：
+
+- **类型安全的查询构建器：** Prisma 使用强类型语言（如 TypeScript）生成查询构建器，从而提供了在编译时捕获错误和类型检查的能力。这有助于减少错误，并提供更好的开发人员体验。
+- **强大的 ORM 层：** Prisma 提供了一个功能强大的 ORM 层，使开发人员能够以面向对象的方式操作数据库。它自动生成了数据库模型的 CRUD（创建、读取、更新、删除）方法，简化了与数据库的交互。
+- **数据库迁移：** Prisma 提供了数据库迁移工具，可帮助开发人员管理数据库模式的变更。它可以自动创建和应用迁移脚本，使数据库的演进过程更加简单和可控。
+- **性能优化：** Prisma 使用先进的查询引擎和数据加载技术，以提高数据库访问的性能。它支持高级查询功能，如关联查询和聚合查询，并自动优化查询以提供最佳的性能
+
+### 1. 安装 prisma cli
+
+```js
+npm install -g prisma
+```
+
+### 2. 初始化项目
+
+```js
+prisma init --datasource-provider mysql
+```

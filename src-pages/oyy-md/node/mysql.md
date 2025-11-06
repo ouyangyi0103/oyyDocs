@@ -439,5 +439,131 @@ npm install -g prisma
 ### 2. 初始化项目
 
 ```js
+prisma init -h
+// 查看prisma有哪些命令
+
 prisma init --datasource-provider mysql
+// 执行命令之后 就会创建生成基本目录
+```
+
+### 3. 连接 mysql
+
+#### 3.1 修改.env 文件
+
+```js
+DATABASE_URL = "mysql://root:123456@localhost:3306/xiaoman";
+// DATABASE_URL="mysql://账号:密码@主机:端口/库名"
+```
+
+### 4.创建表
+
+- prisma 文件夹/schema.prisma
+
+```js
+model Post {
+  id       Int     @id @default(autoincrement()) //id 整数 自增
+  title    String  //title字符串类型
+  publish  Boolean @default(false) //发布 布尔值默认false
+  author   User   @relation(fields: [authorId], references: [id]) //作者 关联用户表 关联关系 authorId 关联user表的id
+  authorId Int
+}
+
+model User {
+  id    Int    @id @default(autoincrement())
+  name  String
+  email String @unique
+  posts Post[]
+}
+```
+
+然后执行命令去创建表
+:::danger 注意
+用这个命令一定要注意是否覆盖当前库里面的所有内容，建议使用一个新的库去测试
+:::
+
+```js
+prisma migrate dev
+```
+
+### 5.实现 mysql 增删查改
+
+```js
+import express from "express";
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+const app = express();
+const port: number = 3000;
+
+app.use(express.json());
+
+//关联查找
+app.get("/", async (req, res) => {
+  const data = await prisma.user.findMany({
+    include: {
+      posts: true
+    }
+  });
+  res.send(data);
+});
+//单个查找
+app.get("/user/:id", async (req, res) => {
+  const row = await prisma.user.findMany({
+    where: {
+      id: Number(req.params.id)
+    }
+  });
+  res.send(row);
+});
+//新增
+app.post("/create", async (req, res) => {
+  const { name, email } = req.body;
+  const data = await prisma.user.create({
+    data: {
+      name,
+      email,
+      posts: {
+        create: {
+          title: "标题",
+          publish: true
+        }
+      }
+    }
+  });
+  res.send(data);
+});
+
+//更新
+app.post("/update", async (req, res) => {
+  const { id, name, email } = req.body;
+  const data = await prisma.user.update({
+    where: {
+      id: Number(id)
+    },
+    data: {
+      name,
+      email
+    }
+  });
+  res.send(data);
+});
+
+//删除
+app.post("/delete", async (req, res) => {
+  const { id } = req.body;
+  await prisma.post.deleteMany({
+    where: {
+      authorId: Number(id)
+    }
+  });
+  const data = await prisma.user.delete({
+    where: {
+      id: Number(id)
+    }
+  });
+  res.send(data);
+});
+
+app.listen(port, () => {
+  console.log(`App listening on port ${port}`);
+});
 ```

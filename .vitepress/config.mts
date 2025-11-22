@@ -82,8 +82,10 @@ export default defineConfig({
             items: [
               { text: "概述与原理", link: "src-pages/oyy-md/node/base" },
               { text: "核心API", link: "src-pages/oyy-md/node/coreApi" },
-              { text: "实用工具与其它技术", link: "src-pages/oyy-md/node/utils" },
-              { text: "数据库mysql", link: "src-pages/oyy-md/node/mysql" }
+              { text: "实用工具与其它", link: "src-pages/oyy-md/node/utils" },
+              { text: "数据库mysql", link: "src-pages/oyy-md/node/mysql" },
+              { text: "redis与登录技术", link: "src-pages/oyy-md/node/redis" },
+              { text: "项目架构与其它", link: "src-pages/oyy-md/node/project" }
             ]
           },
           {

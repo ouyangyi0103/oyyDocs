@@ -13,7 +13,14 @@ export default defineConfig({
     // 右上角导航
     nav: [
       { text: "首页", link: "index.md" },
-      { text: "武林秘籍", link: "src-pages/oyy-md/typescript/ts-infer" }
+      {
+        text: "武林秘籍",
+        items: [
+          { text: "vue2/3", link: "src-pages/interview/vue/vue.md" },
+          { text: "Item B", link: "/item-2" },
+          { text: "Item C", link: "/item-3" }
+        ]
+      }
     ],
     // 全局搜索
     search: {

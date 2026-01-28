@@ -5,9 +5,9 @@ export default defineConfig({
   title: "oyy Project",
   description: "无人扶我青云志，我自踏雪至山巅。若是命中无此运，孤身亦可登昆仑。",
   // 根路径
-  base: "/oyyDocs/",
-  // 输出目录
+  base: "/oyyDocs/docs",
   outDir: "docs",
+  // 输出目录
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     // 右上角导航
